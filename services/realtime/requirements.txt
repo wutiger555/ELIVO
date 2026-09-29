@@ -1,0 +1,12 @@
+numpy
+sounddevice
+soundfile
+onnxruntime
+httpx
+opencc-python-reimplemented
+psutil
+pydantic
+fastapi
+uvicorn[standard]
+anthropic
+pytest

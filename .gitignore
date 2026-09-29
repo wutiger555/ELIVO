@@ -22,3 +22,7 @@ spikes/asr-realtime/systap/systap
 
 # impeccable 設計檢查工具的快取
 .impeccable/hook.cache.json
+
+# 前端建置產物與 Swift 小工具編譯產物
+apps/web/dist/
+apps/capture-mac/systap/systap
