@@ -121,8 +121,11 @@ def test_second_screen_pairing(tmp_path, dirs):
         with c.websocket_connect(f"/ws/view?token={pair['token']}") as ws:
             snap = json.loads(ws.receive_text())
             assert snap["type"] == "snapshot" and snap["meeting"]["id"] == m["id"]
+            c.delete(f"/api/meetings/{m['id']}/pair")      # 撤銷：已連線的第二螢幕要被斷開
+            with pytest.raises(WebSocketDisconnect) as closed:
+                ws.receive_text()
+            assert closed.value.code == 4403
 
-        c.delete(f"/api/meetings/{m['id']}/pair")
         with pytest.raises(WebSocketDisconnect):
             with c.websocket_connect(f"/ws/view?token={pair['token']}") as ws:
                 ws.receive_text()

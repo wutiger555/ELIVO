@@ -51,6 +51,7 @@ class Hub:
 
     def __init__(self):
         self.clients: dict[str, set[WebSocket]] = {}
+        self.loop: asyncio.AbstractEventLoop | None = None   # 服務啟動時設定；從執行緒呼叫也能安全送出
 
     def add(self, meeting_id: str, ws: WebSocket):
         self.clients.setdefault(meeting_id, set()).add(ws)
@@ -61,7 +62,17 @@ class Hub:
     def broadcast(self, meeting_id: str, ev: dict):
         msg = json.dumps(ev, ensure_ascii=False)
         for ws in list(self.clients.get(meeting_id, ())):
-            asyncio.create_task(self._send(meeting_id, ws, msg))
+            self._spawn(self._send(meeting_id, ws, msg))
+
+    def close(self, key: str, code: int):
+        for ws in list(self.clients.get(key, ())):
+            self._spawn(ws.close(code=code))
+
+    def _spawn(self, coro):
+        try:
+            asyncio.get_running_loop().create_task(coro)
+        except RuntimeError:  # 不在 event loop 執行緒（例如同步的 API handler）
+            asyncio.run_coroutine_threadsafe(coro, self.loop)
 
     async def _send(self, meeting_id, ws, msg):
         try:
@@ -78,6 +89,7 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        hub.loop = asyncio.get_running_loop()
         app.state.store = store or Store(DB_PATH)
         app.state.interrupted = app.state.store.mark_interrupted()
         if asr is None:
@@ -91,10 +103,14 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
         if llm is not None:
             llm_settings["llm"] = llm
         app.state.manager = SessionManager(app.state.store, app.state.asr, hub.broadcast, llm_settings)
-        yield
-        await app.state.manager.shutdown()
-        if asr is None:
-            app.state.asr.stop()
+        try:
+            yield
+        finally:
+            try:
+                await app.state.manager.shutdown()
+            finally:
+                if asr is None:
+                    app.state.asr.stop()
 
     app = FastAPI(title="ELIVO realtime", lifespan=lifespan)
 
@@ -255,6 +271,7 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
         mgr().forget(meeting_id)
         for token in [t for t, p in pairs.items() if p["meeting_id"] == meeting_id]:
             pairs.pop(token)
+        hub.close(f"view:{meeting_id}", 4403)
         return {"ok": True}
 
     @app.post("/api/meetings/{meeting_id}/start")
@@ -308,9 +325,7 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
     def unpair(meeting_id: str):
         for token in [t for t, p in pairs.items() if p["meeting_id"] == meeting_id]:
             pairs.pop(token)
-        # 已連線的第二螢幕也一併斷開
-        for ws in list(hub.clients.get(f"view:{meeting_id}", ())):
-            asyncio.create_task(ws.close(code=4403))
+        hub.close(f"view:{meeting_id}", 4403)   # 已連線的第二螢幕也一併斷開
         return {"ok": True}
 
     # ---- WebSocket ----

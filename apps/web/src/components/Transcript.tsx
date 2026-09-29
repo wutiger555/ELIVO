@@ -1,0 +1,107 @@
+// 逐字稿：正在說的一句放大，定稿後縮回；新確認的字逐字浮現；自動捲動把最新一句停在畫面約 62% 高度。
+import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { Utt } from "../lib/api";
+import { timecode } from "../lib/format";
+
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const Row = memo(function Row({ u, flash }: { u: Utt; flash: number }) {
+  // settled：已經顯示過的確定字（純文字）；fresh：這次新增、要逐字浮現的字
+  const [view, setView] = useState({ settled: u.committed, fresh: "", rewrite: 0 });
+  const prev = useRef(u.committed);
+  useEffect(() => {
+    const old = prev.current;
+    prev.current = u.committed;
+    if (u.committed === old) return;
+    if (u.committed.startsWith(old) && !reduced) {
+      setView((v) => ({ ...v, settled: old, fresh: u.committed.slice(old.length) }));
+      const id = window.setTimeout(() => setView((v) => ({ ...v, settled: u.committed, fresh: "" })), 900);
+      return () => window.clearTimeout(id);
+    }
+    setView((v) => ({ settled: u.committed, fresh: "", rewrite: v.rewrite + 1 }));   // 定稿改寫了先前的確定字
+  }, [u.committed]);
+
+  const chars = [...view.fresh];
+  const step = Math.min(22, 450 / Math.max(1, chars.length));   // 總長度上限約 450ms
+  return (
+    <div id={`utt-${u.id}`} className={`utt${u.final ? "" : " live"}${flash ? " flash" : ""}`} key={flash}>
+      <div className="gutter">
+        <span className={`who${u.speaker === "我" ? " me" : ""}`}>{u.speaker}</span>
+        <span className="tc">{timecode(u.t)}</span>
+      </div>
+      <div className="text">
+        <span key={view.rewrite} className={view.rewrite ? "rewrite" : undefined}>{view.settled}</span>
+        {chars.map((ch, i) => (
+          <span key={view.settled.length + i} className="ink" style={{ animationDelay: `${Math.round(i * step)}ms` }}>{ch}</span>
+        ))}
+        <span className="t">{u.tentative}</span>
+      </div>
+    </div>
+  );
+});
+
+export function Transcript({ utts, pauses = [], focus, emptyText = "等待說話…" }: {
+  utts: Utt[];
+  pauses?: { start_t: number; end_t: number | null }[];
+  focus?: { id: string; n: number } | null;
+  emptyText?: string;
+}) {
+  const scroll = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLDivElement>(null);
+  const [stick, setStick] = useState(true);
+  const programmatic = useRef(false);
+
+  const target = () => {
+    const el = scroll.current, last = list.current?.lastElementChild as HTMLElement | null;
+    if (!el || !last) return 0;
+    return Math.max(0, last.offsetTop + last.offsetHeight - el.clientHeight * 0.62);
+  };
+  const follow = () => {
+    const el = scroll.current;
+    if (!el || Math.abs(el.scrollTop - target()) < 2) return;
+    programmatic.current = true;
+    window.setTimeout(() => { programmatic.current = false; }, 800);
+    el.scrollTo({ top: target(), behavior: reduced ? "auto" : "smooth" });
+  };
+  useLayoutEffect(() => { if (stick) follow(); });
+
+  useEffect(() => {
+    if (!focus) return;
+    setStick(false);
+    document.getElementById(`utt-${focus.id}`)?.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
+  }, [focus]);
+
+  // 暫停區間插在對應的時間點之後
+  const rows: (Utt | { pause: { start_t: number; end_t: number | null } })[] = [];
+  const marks = [...pauses];
+  for (const u of utts) {
+    while (marks.length && marks[0].start_t <= u.t) rows.push({ pause: marks.shift()! });
+    rows.push(u);
+  }
+  for (const p of marks) rows.push({ pause: p });
+
+  return (
+    <>
+      <div
+        className="scroll"
+        ref={scroll}
+        onScroll={() => { if (!programmatic.current) setStick((scroll.current?.scrollTop ?? 0) >= target() - 150); }}
+      >
+        <div className="transcript" ref={list}>
+          {!utts.length && <div className="placeholder">{emptyText}</div>}
+          {rows.map((r) =>
+            "pause" in r ? (
+              <div className="pause-mark" key={`p-${r.pause.start_t}`}>
+                {/* 會議時鐘不含暫停，所以暫停只有一個時間點 */}
+                {r.pause.end_t == null ? "暫停中" : "暫停"} · {timecode(r.pause.start_t)}
+              </div>
+            ) : (
+              <Row key={r.id} u={r} flash={focus?.id === r.id ? focus.n : 0} />
+            ),
+          )}
+        </div>
+      </div>
+      <button className={`jump${stick ? "" : " show"}`} type="button" onClick={() => { setStick(true); follow(); }}>回到最新</button>
+    </>
+  );
+}

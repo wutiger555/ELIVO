@@ -44,15 +44,25 @@ ELIVO 在會議進行中，安靜地把「現在說的話」和「過去的決�
 5. **信任從第一天做起**：不用客戶資料訓練、讓與會者看得到告知、Ephemeral mode、不建聲紋、不做情緒辨識。
 6. **硬體延後**：先用 iPad 當第二螢幕，驗證「實體存在感」的價值。
 
-## 規劃中的程式碼結構（Phase 1 開始時建立）
+## 本機執行（產品原型）
+
+```bash
+apps/capture-mac/systap/build.sh                      # 系統音訊擷取（Core Audio process tap）
+cd apps/web && npm install && npm run build && cd -   # 網頁
+cd services/realtime && ~/.venvs/elivo-asr/bin/python -m elivo   # http://localhost:8765
+```
+
+環境準備（模型、Python venv、LLM 金鑰）見 [`services/realtime/README.md`](services/realtime/README.md) 與 [`spikes/asr-realtime/README.md`](spikes/asr-realtime/README.md)。資料都存在 `~/ELIVO-data/`，不在 repo 裡。
+
+## 程式碼結構（部分已建立）
 
 ```text
 apps/
-  desktop/        # Tauri 2 + React UI
-  capture-mac/    # Swift helper：Core Audio taps、AEC、本地 ASR/LLM
-  web/            # 第二螢幕 / Web 模式
+  desktop/        # （未建立）Tauri 2 + React UI
+  capture-mac/    # ✅ systap：Core Audio process tap；之後加 AEC、本地 ASR/LLM
+  web/            # ✅ React 網頁：會議庫、新會議、即時會議、會後確認、第二螢幕
 services/
-  realtime/       # Python：ASR gateway、Tier-1/2、retrieval、surfacing policy
+  realtime/       # ✅ Python：擷取、ASR、會中持續修正的會議記錄、SQLite、API；之後加 retrieval、surfacing policy
   ingest/         # 文件 / 逐字稿匯入、connectors
 packages/
   schema/         # 卡片、事件、ledger 共用型別

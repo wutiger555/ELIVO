@@ -81,7 +81,7 @@ class MeetingSession:
     def _set(self, **fields):
         self.meeting = self.store.update_meeting(self.id, **fields)
         self.broadcast(self.id, {"type": "meeting", "meeting": self.public_meeting(), "clock": self.clock(),
-                                 "running": self.resumed_at is not None})
+                                 "running": self.resumed_at is not None, "pauses": self.store.pauses(self.id)})
 
     def public_meeting(self) -> dict:
         m = {k: v for k, v in self.meeting.items() if k != "minutes"}
@@ -231,6 +231,8 @@ class MeetingSession:
         if ev["final"] and ev["committed"]:
             if not self.ephemeral:
                 self.store.upsert_utterance(self.id, ev["id"], ev["speaker"], ev["t"], ev["committed"])
+            # 會議時間也跟著每句寫入：意外中斷後繼續時，時鐘從中斷前的位置接著走
+            self.store.update_meeting(self.id, duration_s=self.clock())
             if self.minutes:
                 self.minutes.add_final(ev)
         self.broadcast(self.id, ev)

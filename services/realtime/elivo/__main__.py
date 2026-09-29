@@ -20,4 +20,5 @@ if __name__ == "__main__":
     a = ap.parse_args()
     settings = Settings(port=a.port, asr_model=a.asr_model, asr_port=a.asr_port, llm_provider=a.llm_provider,
                         fast_model=a.fast_model, reflect_model=a.reflect_model)
-    uvicorn.run(create_app(settings), host="0.0.0.0", port=a.port, log_level="warning")
+    # 關閉時最多等 5 秒讓瀏覽器的 WebSocket 斷線，之後照樣執行收尾（暫停會議、關掉 whisper-server）
+    uvicorn.run(create_app(settings), host="0.0.0.0", port=a.port, log_level="warning", timeout_graceful_shutdown=5)

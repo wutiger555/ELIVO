@@ -4,7 +4,8 @@ ELIVO（意聯）是一個即時對談智慧產品：不用 bot 的 Mac app，�
 
 專案目前在 Phase 0（驗證期）：repo 裡只有規劃文件，還沒有程式碼。
 
-**目前的下一步**：見 `docs/08-handoff-local-dev.md`，在本地 Mac 上實測即時中英混說 ASR（Breeze-ASR-25 / Whisper），spike 放在 `spikes/asr-realtime/`。
+**目前進度**：ASR spike 已完成（`spikes/asr-realtime/RESULTS.md`、ADR-0006 草案）。產品原型在 `services/realtime/`（Python）與 `apps/web/`（React），啟動方式見 README。
+**下一步**：階段 ③b（記錄與逐字稿的手動編輯、會議改名／移動／標籤）→ ④「前面說過」提示與出卡頻率控制 → ⑤ 跨會議 Decision Ledger；另待研究說話者分辨（diarization，須符合 ADR-0003）。
 
 ## 文件位置
 - `docs/01-research-report.md`：全盤調查與最終判斷。要改變產品方向前先讀這份。
@@ -13,6 +14,10 @@ ELIVO（意聯）是一個即時對談智慧產品：不用 bot 的 Mac app，�
 - `docs/04-mvp-spec.md`：MVP 的 user stories 與驗收標準。
 - `docs/adr/`：決策紀錄。有重大決策時新增一份 ADR。
 - `docs/research/`：研究附錄，附來源連結。
+- `services/realtime/`：即時服務（擷取、ASR、會議記錄、SQLite、API），測試用 `pytest`。
+- `apps/web/`：網頁介面（React＋TypeScript＋Vite，使用 `design/` 元件）。
+- `apps/capture-mac/systap/`：系統音訊擷取（Swift）。
+- 資料與模型都在 repo 外：`~/ELIVO-data/`、`~/.cache/whisper.cpp/`。
 - `design/`：設計系統（從 Claude Design 專案「ELIVO Design System」同步）。做任何 UI 前先讀 `design/readme.md`（品牌、文案、視覺規則）；tokens 在 `design/tokens/`，React 元件在 `design/components/`，Mac app 點擊原型在 `design/ui_kits/mac-app/`。
 
 ## 慣例

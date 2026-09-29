@@ -57,6 +57,7 @@ class WhisperServer:
             # verbose_json 預設會另算語言機率，等於多跑一次 encoder，延遲幾乎翻倍
             "--no-language-probabilities",
         ]
+        self._kill_orphans()
         # 埠已被占用時，健康檢查會連到別人的 server（例如上次殘留的其他模型），量到的數字就錯了
         with socket.socket() as s:
             if s.connect_ex(("127.0.0.1", self.port)) == 0:
@@ -74,6 +75,17 @@ class WhisperServer:
                 pass
             time.sleep(0.2)
         raise TimeoutError("whisper-server 啟動逾時")
+
+    def _kill_orphans(self):
+        """上次的服務被強制結束時，whisper-server 可能變成孤兒（父行程為 launchd）還占著 port，先收掉。"""
+        import psutil
+
+        for p in psutil.process_iter(["name", "cmdline", "ppid"]):
+            cmd = p.info["cmdline"] or []
+            if p.info["name"] == "whisper-server" and p.info["ppid"] == 1 and "--port" in cmd \
+                    and cmd[cmd.index("--port") + 1] == str(self.port):
+                p.terminate()
+                p.wait(timeout=5)
 
     def stop(self):
         if self.proc and self.proc.poll() is None:
