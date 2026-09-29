@@ -72,25 +72,25 @@
 ```mermaid
 gantt
   title ELIVO Roadmap (M0 = 2026-10)
-  dateFormat YYYY-MM
+  dateFormat YYYY-MM-DD
   axisFormat %y/%m
   section Phase 0 驗證
-  Discovery 訪談 + WoZ            :p0a, 2026-10, 2M
-  ASR bake-off + 技術 spikes       :p0b, 2026-10, 2M
-  品牌/網域/商標                   :p0c, 2026-10, 1M
+  Discovery 訪談 + WoZ            :p0a, 2026-10-01, 60d
+  ASR bake-off + 技術 spikes       :p0b, 2026-10-01, 60d
+  品牌/網域/商標                   :p0c, 2026-10-01, 30d
   section Phase 1 軟體 MVP
-  MVP1 Live transcript + 本場卡片  :m1, 2026-12, 2M
-  MVP2 Memory + 檢索 + Ambient tray :m2, 2027-02, 2M
-  MVP3 主動卡片 + 第二螢幕模式      :m3, 2027-04, 2M
-  付費試點 (3–5 團隊)              :pilot, 2027-05, 3M
+  MVP1 Live transcript + 本場卡片  :m1, 2026-12-01, 60d
+  MVP2 Memory + 檢索 + Ambient tray :m2, 2027-02-01, 60d
+  MVP3 主動卡片 + 第二螢幕模式      :m3, 2027-04-01, 60d
+  付費試點 (3–5 團隊)              :pilot, 2027-05-01, 90d
   section Phase 2 團隊與硬體
-  Team workspace + Connectors       :t1, 2027-06, 4M
-  SOC2 Type I → II                  :t2, 2027-07, 6M
-  Display EVT (thin client) 20 台   :hw1, 2027-07, 4M
-  Seed round                        :seed, 2027-06, 4M
+  Team workspace + Connectors       :t1, 2027-06-01, 120d
+  SOC2 Type I → II                  :t2, 2027-07-01, 180d
+  Display EVT (thin client) 20 台   :hw1, 2027-07-01, 120d
+  Seed round                        :seed, 2027-06-01, 120d
   section Phase 3 平台與企業
-  Enterprise / 私有部署             :e1, 2027-12, 6M
-  Zoom RTMS / Teams / 日本市場       :e2, 2028-01, 6M
+  Enterprise / 私有部署             :e1, 2027-12-01, 180d
+  Zoom RTMS / Teams / 日本市場       :e2, 2028-01-01, 180d
 ```
 
 ### Phase 0｜驗證（M0–M2，2026/10–11）
