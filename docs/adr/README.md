@@ -9,4 +9,4 @@
 | [0003](0003-no-emotion-no-voiceprint.md) | 不做情緒辨識；預設不建立聲紋；不以客戶資料訓練 | Accepted |
 | [0004](0004-phase1-stack.md) | Phase 1 技術棧：Tauri + React / Swift helper / Python realtime / Postgres | Proposed |
 | [0005](0005-kg-lite-ledger.md) | Decision Ledger 先用 Postgres 關聯表（KG-lite），不先上 GraphRAG | Accepted |
-| 0006 | 主 / 備 ASR 供應商選擇 | **Pending**（Phase 0 bake-off 後決定） |
+| [0006](0006-asr-selection.md) | 主 / 備 ASR 選擇：本地 Breeze-ASR-25 q8（whisper.cpp）為主，large-v3-turbo／Soniox 為備 | Proposed（待真實錄音 MER） |
