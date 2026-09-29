@@ -1,250 +1,250 @@
-> **研究附錄**（2026-09-29 由研究代理以公開網路資料彙整；英文原文保留）。每項非顯而易見的主張均附來源；標示 *unverified* 者尚待一手資料確認。**非法律意見。**
+> **研究附錄**（2026-09-29 由研究代理以公開網路資料彙整，已譯為中文）。每項非顯而易見的主張均附來源；標示「待驗證」者尚待一手資料確認。**非法律意見。**
 
-# ELIVO Due Diligence: Real-Time Conversation Intelligence, Competitive and Market Landscape (as of 2026-09-29)
+# ELIVO 盡職調查：即時對話智慧的競爭與市場概況（截至 2026-09-29）
 
-## 0. Executive summary
+## 0. 執行摘要
 
-- **Post-meeting notetaking is a commodity now, and the market is consolidating.** Otter passed $100M ARR. Granola is valued at $1.5B. Superhuman (formerly Grammarly) bought Fathom on 2026-09-14. The platforms (Microsoft, Zoom, Google) bundle notes into their suites and are now actively blocking third-party bots. A new standalone notetaker has no room.
-- **Real-time help during the meeting is arriving, but it is mostly reactive.** The user has to ask a question: Otter Meeting Agent (voice-activated), Zoom In-Meeting Questions, Ask Gemini in Meet, Teams Facilitator, Fireflies Live Assist. The proactive tools are narrow. They either match keywords to battlecards (Outreach Kaia, Clari Copilot, Balto, Cresta) or run as a generic "whisper" overlay (Cluely). I found no product that checks what is being said against past decisions, documents and numbers and raises a "this contradicts Aug-12" or "cost is 18% off" card with high precision. That is ELIVO's core idea and it is still open. But the big platforms each have every ingredient (a live transcript, the organisation's documents, an LLM), so the window is probably 12–24 months.
-- **Mandarin, Traditional Chinese and Mandarin-English code-switching is a real, verifiable gap in the US tools.** Otter supports only Simplified Chinese (in beta), one language per meeting. Google "Take notes for me" has no Chinese at all and one language per meeting. Teams AI notes support one language per meeting. Open models such as MediaTek Breeze-ASR-25 now make zh-TW code-switching ASR cheap to build, so ASR itself is not a moat. The workflow, the knowledge graph and trust (on-prem or data-residency) are where a moat can come from.
-- **Hardware is risky but proven when it is focused.** Plaud shipped over 2M devices and has over $100M software ARR. Humane was bricked. Limitless was absorbed by Meta. Bee was absorbed by Amazon. Chinese competitors (DingTalk A1 at RMB 499) quickly commoditise recorder-style hardware.
+- **會後筆記如今已是大眾化商品，市場正在整併。** Otter 的 ARR 已突破 $100M。Granola 估值達 $1.5B。Superhuman（前身為 Grammarly）於 2026-09-14 收購 Fathom。各大平台（Microsoft、Zoom、Google）將筆記功能綁進自家套裝，且正積極封鎖第三方 bot。新的獨立筆記工具已無生存空間。
+- **會議中的即時協助正在出現，但多半是被動式的。** 使用者必須主動提問：Otter Meeting Agent（語音啟動）、Zoom In-Meeting Questions、Meet 中的 Ask Gemini、Teams Facilitator、Fireflies Live Assist。主動式工具則範圍狹窄：它們要不是以關鍵字比對 battlecard（Outreach Kaia、Clari Copilot、Balto、Cresta），就是以通用型「耳語（whisper）」浮層運作（Cluely）。我找不到任何產品能把會議中所說的內容與過去的決策、文件和數字進行比對，並以高精準度跳出「這與 8 月 12 日的決議矛盾」或「成本偏離 18%」之類的卡片。這正是 ELIVO 的核心構想，而且目前仍是空白市場。不過各大平台都已具備所有要素（即時逐字稿、組織文件、LLM），因此機會窗口大概只有 12–24 個月。
+- **華語、繁體中文及華英夾雜（code-switching）是美國工具真實且可驗證的缺口。** Otter 僅支援簡體中文（測試版），且每場會議只能用一種語言。Google「Take notes for me」完全不支援中文，每場會議也只能用一種語言。Teams AI 筆記每場會議只支援一種語言。聯發科 Breeze-ASR-25 等開放模型如今讓 zh-TW 夾雜語 ASR 的建置成本變得很低，所以 ASR 本身並非護城河。護城河可能來自工作流程、知識圖譜與信任（地端部署或資料落地）。
+- **硬體風險高，但聚焦時已獲驗證。** Plaud 出貨超過 2M 台裝置，軟體 ARR 超過 $100M。Humane 的裝置已被停用變磚。Limitless 被 Meta 併入。Bee 被 Amazon 併入。中國競爭者（釘釘 DingTalk A1，售價 RMB 499）迅速讓錄音筆型硬體商品化。
 
 ---
 
-## 1. Competitive landscape
+## 1. 競爭概況
 
-### (a) Post-meeting notetakers (increasingly adding live features)
+### (a) 會後筆記工具（逐步加入即時功能）
 
-| Player | Positioning | Real-time? | External knowledge? | Scale / funding | Recent news |
+| 業者 | 定位 | 即時？ | 外部知識？ | 規模／募資 | 近期動態 |
 |---|---|---|---|---|---|
-| **Otter.ai** | Now "AI Meeting Agent" suite (Meeting, Sales, SDR agents) | **Yes.** Voice-activated agent answers live questions from the company-wide meeting database; live sales coaching ([UC Today](https://www.uctoday.com/unified-communications/otter-revolutionises-meetings-with-ai-agent-that-speaks-up-during-calls/)) | Meeting DB, MCP server, public API; HIPAA (Jul 2025) | $100M ARR (Mar 2025), 35M+ users, <200 staff ([Otter blog, Dec 2025](https://otter.ai/blog/otter-ai-caps-transformational-2025-with-100m-arr-milestone-industry-first-ai-meeting-agents-and-global-enterprise-expansion)) | Class action consolidated as *In re Otter.AI Privacy Litigation*. On 2026-08-13 the court let the Wiretap Act, CIPA and BIPA claims proceed ([NatLawReview](https://natlawreview.com/article/invited-participant-or-third-party-eavesdropper-court-holds-otterai-third-party), [RecordingLaw](https://www.recordinglaw.com/news/otter-ai-wiretap-lawsuit-explained/)) |
-| **Fireflies.ai** | "AI teammate" for meetings, email, CRM; AI Sales Suite (Jul 2026) | **Yes.** "Live Assist" gives live notes, suggestions and answers, but needs the bot in the call ([Fireflies KB](https://guide.fireflies.ai/articles/6032274417-learn-about-fireflies-live-assist-get-real-time-suggestions-answers-and-notes-live-during-the-meeting)) | CRM (HubSpot/Salesforce), "AskFred" | $1B valuation via June 2025 tender offer ([Fireflies](https://fireflies.ai/blog/fireflies-1-billion-valuation)); claims 20M users / 500k orgs; revenue unverified (Latka estimate of $10.9M for 2024 looks stale) | BIPA voiceprint class action *Cruz v. Fireflies.AI* (C.D. Ill., filed 2025-12-18) ([Data Privacy Insider](https://www.dataprivacyandsecurityinsider.com/2025/12/lawsuit-alleges-fireflies-ai-corp-illegally-collects-biometric-data-from-virtual-meetings/)) |
-| **Granola** | Bot-free Mac/Windows "AI notepad", moving to an "enterprise AI app" | Partial. You can chat during the meeting, but it gives no proactive cards | Spaces, APIs, MCP server | $125M Series C at $1.5B (Mar 2026, Index); $192M raised in total; customers include Vanta, Asana, Cursor, Mistral ([TechCrunch](https://techcrunch.com/2026/03/25/granola-raises-125m-hits-1-5b-valuation-as-it-expands-from-meeting-notetaker-to-enterprise-ai-app/)) | Users pushed back after Granola restricted access to its local database, which broke their agent workflows. It now claims 32 languages including Mandarin and Cantonese ([Granola](https://www.granola.ai/updates/granola-now-supports-32-languages)); whether it handles code-switching is unverified |
-| **Fathom** | Free-tier-led notetaker, strong with HubSpot users | Minimal | CRM sync | 400k+ MAU; valued at $94M in 2024 ([TechCrunch](https://techcrunch.com/2026/09/14/superhuman-acquires-yc-backed-notetaker-fathom-as-productivity-platforms-push-for-agentic-work/)); ~$30M ARR in 2025 (Latka, unverified) | **Acquired by Superhuman on 2026-09-14**, a clear "the notetaker is becoming a feature" signal ([Superhuman](https://blog.superhuman.com/superhuman-acquires-fathom/)) |
-| **tl;dv** | SMB/sales notetaker, EU-based | Limited | CRM | n/a | Business tier adds sales coaching |
-| **Read AI** | Notes, engagement/sentiment scoring, "Search Copilot" across meetings, email and chat | **Yes.** Live engagement and speaking-coach nudges ([Read AI](https://www.read.ai/meeting-tools)) | Email, Slack, CRM | $50M Series B (Oct 2024), $81M in total ([Read AI](https://www.read.ai/post/read-ai-announces-50-million-series-b-launch-of-read-ai-for-gmail)) | No new round found for 2026 |
-| **Notion AI Meeting Notes** | Bot-free capture inside Notion pages | No | Notion workspace (strong RAG base) | Bundled in Business at $20/user/mo ([Engadget](https://www.engadget.com/ai/notion-ai-can-transcribe-conversations-and-write-reports-but-itll-cost-you-130018464.html)) | 16 languages |
-| **Krisp** | Noise cancellation plus bot-free notes and accent conversion | Audio-level live processing | CRM push | n/a | Customer-side accent conversion for call centres (Mar 2026) |
-| **Jamie / Bluedot / Supernormal** | Bot-free (Jamie, Bluedot) or credit-based (Supernormal 2.0) notetakers | No | Limited | Small | Supernormal switched to credit-based pricing in 2026 ([Supernormal](https://www.supernormal.com/pricing)) |
-| **Avoma** | Notetaker plus CI plus revenue intelligence for SMB sales | "Real-time answer assistant" is sold inside the CI add-on | CRM | n/a | Add-ons can push the price to about $77/seat ([Docket](https://docket.io/resources/research/avoma-pricing)) |
-| **Wispr Flow Notetaker** | New bot-free entrant (Mac Aug 2026, Windows Sep 2026) | No | n/a | n/a | 21 languages ([TechCrunch](https://techcrunch.com/2026/08/05/wispr-flow-is-preparing-to-launch-a-meeting-notetaker-updated-terms-suggest/)) |
+| **Otter.ai** | 現為「AI Meeting Agent」套件（Meeting、Sales、SDR agent） | **是。** 語音啟動的 agent 可從全公司會議資料庫即時回答問題；提供即時銷售教練功能（[UC Today](https://www.uctoday.com/unified-communications/otter-revolutionises-meetings-with-ai-agent-that-speaks-up-during-calls/)） | 會議資料庫、MCP server、公開 API；HIPAA（2025 年 7 月） | $100M ARR（2025 年 3 月）、35M+ 使用者、員工 <200 人（[Otter blog, Dec 2025](https://otter.ai/blog/otter-ai-caps-transformational-2025-with-100m-arr-milestone-industry-first-ai-meeting-agents-and-global-enterprise-expansion)） | 集體訴訟合併為 *In re Otter.AI Privacy Litigation*。法院於 2026-08-13 准許 Wiretap Act、CIPA 與 BIPA 之請求繼續進行（[NatLawReview](https://natlawreview.com/article/invited-participant-or-third-party-eavesdropper-court-holds-otterai-third-party)、[RecordingLaw](https://www.recordinglaw.com/news/otter-ai-wiretap-lawsuit-explained/)） |
+| **Fireflies.ai** | 會議、email、CRM 的「AI 隊友」；AI Sales Suite（2026 年 7 月） | **是。** 「Live Assist」提供即時筆記、建議與回答，但需要 bot 進入會議（[Fireflies KB](https://guide.fireflies.ai/articles/6032274417-learn-about-fireflies-live-assist-get-real-time-suggestions-answers-and-notes-live-during-the-meeting)） | CRM（HubSpot/Salesforce）、「AskFred」 | 透過 2025 年 6 月的股份收購要約（tender offer）達 $1B 估值（[Fireflies](https://fireflies.ai/blog/fireflies-1-billion-valuation)）；宣稱有 20M 使用者／500k 個組織；營收待驗證（Latka 估計 2024 年為 $10.9M，數據似已過時） | BIPA 聲紋集體訴訟 *Cruz v. Fireflies.AI*（C.D. Ill.，2025-12-18 提起）（[Data Privacy Insider](https://www.dataprivacyandsecurityinsider.com/2025/12/lawsuit-alleges-fireflies-ai-corp-illegally-collects-biometric-data-from-virtual-meetings/)） |
+| **Granola** | 無 bot 的 Mac/Windows「AI 筆記本」，正轉型為「企業 AI 應用」 | 部分。可在會議中對話，但不會主動推送卡片 | Spaces、API、MCP server | 2026 年 3 月由 Index 領投 $125M C 輪，估值 $1.5B；累計募資 $192M；客戶包括 Vanta、Asana、Cursor、Mistral（[TechCrunch](https://techcrunch.com/2026/03/25/granola-raises-125m-hits-1-5b-valuation-as-it-expands-from-meeting-notetaker-to-enterprise-ai-app/)） | Granola 限制存取其本機資料庫，導致使用者的 agent 工作流程失效，引發使用者反彈。目前宣稱支援 32 種語言，包括華語與粵語（[Granola](https://www.granola.ai/updates/granola-now-supports-32-languages)）；能否處理夾雜語仍待驗證 |
+| **Fathom** | 以免費方案為主的筆記工具，在 HubSpot 使用者中很強勢 | 極少 | CRM 同步 | 400k+ MAU；2024 年估值 $94M（[TechCrunch](https://techcrunch.com/2026/09/14/superhuman-acquires-yc-backed-notetaker-fathom-as-productivity-platforms-push-for-agentic-work/)）；2025 年 ARR 約 $30M（Latka，待驗證） | **2026-09-14 被 Superhuman 收購**，明確顯示「筆記工具正淪為一項功能」（[Superhuman](https://blog.superhuman.com/superhuman-acquires-fathom/)） |
+| **tl;dv** | 中小企業／業務用筆記工具，總部在歐盟 | 有限 | CRM | 不適用 | Business 方案新增銷售教練功能 |
+| **Read AI** | 筆記、參與度／情緒評分，以及橫跨會議、email 與聊天的「Search Copilot」 | **是。** 即時參與度與演說教練提示（[Read AI](https://www.read.ai/meeting-tools)） | Email、Slack、CRM | $50M B 輪（2024 年 10 月），累計 $81M（[Read AI](https://www.read.ai/post/read-ai-announces-50-million-series-b-launch-of-read-ai-for-gmail)） | 未發現 2026 年有新一輪募資 |
+| **Notion AI Meeting Notes** | 在 Notion 頁面內無 bot 擷取 | 否 | Notion 工作區（強大的 RAG 基礎） | 綁在 Business 方案，每位使用者每月 $20（[Engadget](https://www.engadget.com/ai/notion-ai-can-transcribe-conversations-and-write-reports-but-itll-cost-you-130018464.html)） | 16 種語言 |
+| **Krisp** | 降噪，加上無 bot 筆記與口音轉換 | 音訊層級的即時處理 | CRM 推送 | 不適用 | 為客服中心推出客戶端口音轉換（2026 年 3 月） |
+| **Jamie / Bluedot / Supernormal** | 無 bot（Jamie、Bluedot）或點數制（Supernormal 2.0）筆記工具 | 否 | 有限 | 小 | Supernormal 於 2026 年改為點數制計價（[Supernormal](https://www.supernormal.com/pricing)） |
+| **Avoma** | 筆記工具加上 CI 與營收智慧，鎖定中小企業業務 | 「即時回答助理」包含在 CI 加購方案中販售 | CRM | 不適用 | 加購後價格可達每席約 $77（[Docket](https://docket.io/resources/research/avoma-pricing)） |
+| **Wispr Flow Notetaker** | 新進的無 bot 業者（Mac 版 2026 年 8 月、Windows 版 2026 年 9 月） | 否 | 不適用 | 不適用 | 21 種語言（[TechCrunch](https://techcrunch.com/2026/08/05/wispr-flow-is-preparing-to-launch-a-meeting-notetaker-updated-terms-suggest/)） |
 
-### (b) Platform-native (the biggest threat)
+### (b) 平台原生（最大威脅）
 
-- **Microsoft Teams / M365 Copilot.**
-  - **Facilitator** produces live co-authored notes, summarises decisions and open questions, answers questions in chat about the conversation and shared documents, tracks the agenda, and can create Word documents.
-  - Limits: it works only in scheduled meetings (not channel or instant meetings, not calls), external participants cannot see its updates, and it needs a Copilot license ([Microsoft Support](https://support.microsoft.com/en-us/teams/copilot/facilitator-in-microsoft-teams-meetings)).
-  - Copilot costs $30/user/mo for Enterprise and $21 for Business (≤300 users) ([Microsoft](https://www.microsoft.com/en-us/microsoft-365-copilot/pricing)).
-  - Paid seats passed **30M at the end of FY26** ([MSFT FY26 Q4](https://www.microsoft.com/en-us/investor/earnings/fy-2026-q4/press-release-webcast)), against about 450M M365 commercial seats ([Office365ITPros](https://office365itpros.com/2026/01/30/microsoft-fy26-q2-results/)).
-  - AI notes support only single-language meetings ([Microsoft multilingual](https://support.microsoft.com/en-us/office/multilingual-speech-recognition-in-microsoft-teams-650cb6d2-8a33-40e7-840d-36bb90216aa4)). The Interpreter agent recently added Traditional Chinese ([M365 Admin](https://m365admin.handsontek.net/microsoft-teams-ai-interpreter-simultaneous-quality-improvements-new-traditional-chinese-support/)).
-  - Taiwan signal: **KPMG Taiwan is rolling out paid Copilot to all staff from October** ([BigGo](https://finance.biggo.com/news/5847817c-8ea3-41c7-bf29-6c4cba725f23)). Consultants, a core ELIVO segment, are being handed Copilot for free.
-- **Zoom.**
-  - AI Companion 3.0 went GA on 2025-12-15. It adds agentic retrieval across meetings, Google Drive and OneDrive; the standalone tier is $10/mo ([Zoom](https://news.zoom.com/zoom-launches-ai-companion-3-0/)).
-  - In-Meeting Questions lets participants ask what has been said so far. Custom AI Companion costs $12/user/mo.
-  - **ZoomMate** (launched 2026-06-01, from $20/user/mo, credit-metered; EMEA and APAC later in 2026) ([Reworked](https://www.reworked.co/collaboration-productivity/zoom-launches-ai-companion-30-with-10-standalone-option/), [Laxis](https://www.laxis.com/blog/zoom-ai-companion/)).
-  - Meeting summaries cover 36 languages with auto-detection ([Zoom](https://news.zoom.com/breaking-down-boundaries-zoom-ai-companion-expands-language-support-across-its-platform-to-enable-better-global-collaboration-and-productivity/)).
-- **Google Meet / Gemini.**
-  - "Take notes for me" is bundled from Business Standard ($14/user/mo). It supports **EN, FR, DE, IT, JA, KO, PT, ES only, with no Chinese and one language per meeting** ([9to5Google](https://9to5google.com/2026/06/29/google-meet-take-notes-ai-pro-ultra/), [Google Help](https://support.google.com/meet/answer/14754931?hl=en&co=GENIE.Platform%3DDesktop)).
-  - In-person note-taking arrived in August 2026, but only in English and only for 15-minute sessions ([Workspace Updates](https://workspaceupdates.googleblog.com/2026/08/take-notes-with-me-for-in-person-meetings-is-now-available.html)).
-  - **Ask Gemini in Meet** is reactive live Q&A over captions, Workspace documents, Gmail and the web. It launched English-only ([Workspace Updates](https://workspaceupdates.googleblog.com/2025/09/ask-gemini-in-google-meet.html)). This is the closest mainstream product to "live RAG", but the user has to ask.
-- **Apple.** macOS Tahoe records and transcribes Phone and FaceTime audio calls, and Apple Intelligence summarises them in Notes ([Apple](https://support.apple.com/guide/mac-help/mchld69597ca/mac)). It is not a meeting product today. It could become an OS-level threat to bot-free capture on the Mac.
+- **Microsoft Teams / M365 Copilot。**
+  - **Facilitator** 產出即時共同編寫的筆記，彙整決策與未決問題，在聊天中回答關於對話內容與共享文件的問題，追蹤議程，並可建立 Word 文件。
+  - 限制：僅適用於排定的會議（不支援頻道會議或即時會議，也不支援通話），外部與會者看不到它的更新，且需要 Copilot 授權（[Microsoft Support](https://support.microsoft.com/en-us/teams/copilot/facilitator-in-microsoft-teams-meetings)）。
+  - Copilot 企業版每位使用者每月 $30，Business 版 $21（≤300 位使用者）（[Microsoft](https://www.microsoft.com/en-us/microsoft-365-copilot/pricing)）。
+  - 付費席次在 **FY26 年底突破 30M**（[MSFT FY26 Q4](https://www.microsoft.com/en-us/investor/earnings/fy-2026-q4/press-release-webcast)），相較之下 M365 商用席次約 450M（[Office365ITPros](https://office365itpros.com/2026/01/30/microsoft-fy26-q2-results/)）。
+  - AI 筆記僅支援單一語言的會議（[Microsoft multilingual](https://support.microsoft.com/en-us/office/multilingual-speech-recognition-in-microsoft-teams-650cb6d2-8a33-40e7-840d-36bb90216aa4)）。Interpreter agent 近期新增了繁體中文（[M365 Admin](https://m365admin.handsontek.net/microsoft-teams-ai-interpreter-simultaneous-quality-improvements-new-traditional-chinese-support/)）。
+  - 台灣訊號：**KPMG 台灣自 10 月起為全體員工導入付費 Copilot**（[BigGo](https://finance.biggo.com/news/5847817c-8ea3-41c7-bf29-6c4cba725f23)）。顧問是 ELIVO 的核心客群，而他們正免費獲得 Copilot。
+- **Zoom。**
+  - AI Companion 3.0 於 2025-12-15 正式上線（GA）。它新增橫跨會議、Google Drive 與 OneDrive 的 agent 式檢索；獨立方案每月 $10（[Zoom](https://news.zoom.com/zoom-launches-ai-companion-3-0/)）。
+  - In-Meeting Questions 讓與會者詢問截至目前討論了什麼。Custom AI Companion 每位使用者每月 $12。
+  - **ZoomMate**（2026-06-01 推出，每位使用者每月 $20 起，以點數計量；EMEA 與 APAC 將於 2026 年稍晚推出）（[Reworked](https://www.reworked.co/collaboration-productivity/zoom-launches-ai-companion-30-with-10-standalone-option/)、[Laxis](https://www.laxis.com/blog/zoom-ai-companion/)）。
+  - 會議摘要涵蓋 36 種語言並可自動偵測（[Zoom](https://news.zoom.com/breaking-down-boundaries-zoom-ai-companion-expands-language-support-across-its-platform-to-enable-better-global-collaboration-and-productivity/)）。
+- **Google Meet / Gemini。**
+  - 「Take notes for me」自 Business Standard（每位使用者每月 $14）起內含。僅支援 **英、法、德、義、日、韓、葡、西語，不支援中文，且每場會議只能用一種語言**（[9to5Google](https://9to5google.com/2026/06/29/google-meet-take-notes-ai-pro-ultra/)、[Google Help](https://support.google.com/meet/answer/14754931?hl=en&co=GENIE.Platform%3DDesktop)）。
+  - 實體會議筆記於 2026 年 8 月推出，但僅支援英語，且每次僅限 15 分鐘（[Workspace Updates](https://workspaceupdates.googleblog.com/2026/08/take-notes-with-me-for-in-person-meetings-is-now-available.html)）。
+  - **Meet 中的 Ask Gemini** 是被動式即時問答，資料來源涵蓋字幕、Workspace 文件、Gmail 與網路。推出時僅支援英語（[Workspace Updates](https://workspaceupdates.googleblog.com/2025/09/ask-gemini-in-google-meet.html)）。這是最接近「即時 RAG」的主流產品，但仍需使用者主動提問。
+- **Apple。** macOS Tahoe 可錄製並轉錄電話與 FaceTime 語音通話，並由 Apple Intelligence 在備忘錄中產生摘要（[Apple](https://support.apple.com/guide/mac-help/mchld69597ca/mac)）。它目前並非會議產品，但可能成為 Mac 上無 bot 擷取的作業系統層級威脅。
 
-### (c) Real-time in-meeting assistants
+### (c) 會議中即時助理
 
-- **Cluely.**
-  - An invisible overlay that reads the screen and audio and gives live suggestions. It started as "cheat on everything" and repositioned as an "undetectable AI meeting assistant".
-  - Funding: $5.3M seed and a $15M a16z Series A in 2025 ([Wikipedia](https://en.wikipedia.org/wiki/Cluely)).
-  - Pricing: Pro from $11.99/mo (annual); "undetectable" mode costs $149.99/mo ([Cluely](https://cluely.com/pricing)).
-  - In March 2026 the CEO retracted the $7M ARR claim; the real figure was $5.2M.
-  - Journalists measured response delays of 5–90 seconds.
-  - A reported breach exposed 83k users (partly unverified: it is absent from HIBP) ([GhostPilot](https://ghostpilotai.com/blog/cluely-data-breach-investigation/)).
-- **Otter Meeting Agent, Fireflies Live Assist, Read AI** are covered in (a).
-- **Interview copilots.**
-  - Final Round AI raised a $6.88M seed (Jan 2025), claims 500k+ users, and charges $25–90/mo.
-  - This category is ethically contested. In an interviewing.io survey, 81% of interviewers suspected candidates of AI cheating ([Four-Leaf](https://four-leaf.ai/blog/ai-interview-copilots)).
-- **Sybill.** Post-call sales assistant; $11M Series A in 2024 ([TechCrunch](https://techcrunch.com/2024/07/31/sybill-raises-11m-for-its-ai-assistant-that-helps-salespeople-reduce-administrative-burden/)). No real-time product found.
+- **Cluely。**
+  - 一種隱形浮層，可讀取螢幕與音訊並提供即時建議。它最初以「什麼都能作弊（cheat on everything）」起家，後來重新定位為「無法偵測的 AI 會議助理」。
+  - 募資：2025 年 $5.3M 種子輪與 a16z 領投的 $15M A 輪（[Wikipedia](https://en.wikipedia.org/wiki/Cluely)）。
+  - 定價：Pro 每月 $11.99 起（年繳）；「無法偵測」模式每月 $149.99（[Cluely](https://cluely.com/pricing)）。
+  - 2026 年 3 月執行長撤回 $7M ARR 的說法；實際數字為 $5.2M。
+  - 記者實測回應延遲為 5–90 秒。
+  - 據報一起資料外洩事件曝露了 83k 位使用者（部分待驗證：HIBP 上查無此事件）（[GhostPilot](https://ghostpilotai.com/blog/cluely-data-breach-investigation/)）。
+- **Otter Meeting Agent、Fireflies Live Assist、Read AI** 已於 (a) 說明。
+- **面試 copilot。**
+  - Final Round AI 募得 $6.88M 種子輪（2025 年 1 月），宣稱有 500k+ 使用者，收費每月 $25–90。
+  - 此類別具倫理爭議。在 interviewing.io 的調查中，81% 的面試官懷疑候選人使用 AI 作弊（[Four-Leaf](https://four-leaf.ai/blog/ai-interview-copilots)）。
+- **Sybill。** 通話後的銷售助理；2024 年 $11M A 輪（[TechCrunch](https://techcrunch.com/2024/07/31/sybill-raises-11m-for-its-ai-assistant-that-helps-salespeople-reduce-administrative-burden/)）。未發現即時產品。
 
-### (d) Sales conversation intelligence and agent assist
+### (d) 銷售對話智慧與客服輔助（agent assist）
 
-- **Gong.** $500M ARR (May 2026), growing more than 55% year over year ([Gong](https://www.gong.io/press/gong-growth-accelerates-past-55-yoy-arr-tops-500m)). A $4.5B secondary valuation in Nov 2025, down from $7.25B in 2021 (Sacra/Latka). Credit-metered AI launched in Jun 2026. Real-time guidance is not its strength.
-- **Salesloft + Clari.** The merger closed 2025-12-03, with about $450M combined ARR and 5,000+ customers ([Salesloft](https://www.salesloft.com/company/newsroom/clari-salesloft-merger)). Clari Copilot provides **real-time live battlecards**.
-- **Outreach Kaia.** Live "content cards" that pop up when, for example, a competitor or pricing is mentioned ([Outreach](https://support.outreach.io/hc/en-us/articles/1260805179870-Best-Practices-for-Creating-Outreach-Kaia-Content-Cards)). This is the nearest existing version of "insight cards", but it is keyword- or topic-triggered from a curated library, not reasoning over organisational memory.
-- **Chorus (ZoomInfo).** Acquired in 2021 for $575M. One aggregator gives the date as 2026, which I believe is wrong. Customers reported outages in 2026.
-- **Attention.** $30M Series B (Jun 2026). ARR up 4x; moving from real-time coaching to autonomous actions ([PR Newswire](https://www.prnewswire.com/news-releases/attention-raises-30m-series-b-to-build-the-ai-system-that-runs-revenue-teams--not-just-records-them-302808821.html)).
-- **Contact-centre agent assist**, the most mature real-time category:
-  - **Cresta:** under 200ms whisper guidance; $125M Series D (Nov 2024); about $100M ARR by Apr 2026 (Sacra estimate) ([Cresta](https://cresta.com/blog/cresta-raises-125m-to-create-the-unified-platform-for-human-and-virtual-agents), [Sacra](https://sacra.com/c/cresta/)).
-  - **Observe.AI:** $214M raised.
-  - **Balto:** about $52M raised ([Balto](https://www.balto.ai/blog/balto-raises-37-5m-pushes-to-close-execution-gap-for-contact-centers/)).
-  - Lesson for ELIVO: real-time assist makes money where the ROI per conversation is measurable (sales, support).
+- **Gong。** $500M ARR（2026 年 5 月），年增逾 55%（[Gong](https://www.gong.io/press/gong-growth-accelerates-past-55-yoy-arr-tops-500m)）。2025 年 11 月次級市場估值 $4.5B，低於 2021 年的 $7.25B（Sacra/Latka）。2026 年 6 月推出以點數計量的 AI。即時指引並非其強項。
+- **Salesloft + Clari。** 合併於 2025-12-03 完成，合計 ARR 約 $450M，客戶 5,000+（[Salesloft](https://www.salesloft.com/company/newsroom/clari-salesloft-merger)）。Clari Copilot 提供 **即時 battlecard**。
+- **Outreach Kaia。** 即時「內容卡片」，例如在提到競爭對手或價格時跳出（[Outreach](https://support.outreach.io/hc/en-us/articles/1260805179870-Best-Practices-for-Creating-Outreach-Kaia-Content-Cards)）。這是目前最接近「洞察卡片」的產品，但它是從人工整理的內容庫中以關鍵字或主題觸發，而非根據組織記憶進行推理。
+- **Chorus（ZoomInfo）。** 2021 年以 $575M 被收購。有一家彙整網站將日期列為 2026 年，我認為是錯誤的。客戶回報 2026 年曾發生服務中斷。
+- **Attention。** $30M B 輪（2026 年 6 月）。ARR 成長 4 倍；正從即時教練轉向自主執行動作（[PR Newswire](https://www.prnewswire.com/news-releases/attention-raises-30m-series-b-to-build-the-ai-system-that-runs-revenue-teams--not-just-records-them-302808821.html)）。
+- **客服中心 agent assist**，最成熟的即時類別：
+  - **Cresta：** 低於 200ms 的耳語式指引；$125M D 輪（2024 年 11 月）；2026 年 4 月 ARR 約 $100M（Sacra 估計）（[Cresta](https://cresta.com/blog/cresta-raises-125m-to-create-the-unified-platform-for-human-and-virtual-agents)、[Sacra](https://sacra.com/c/cresta/)）。
+  - **Observe.AI：** 已募資 $214M。
+  - **Balto：** 已募資約 $52M（[Balto](https://www.balto.ai/blog/balto-raises-37-5m-pushes-to-close-execution-gap-for-contact-centers/)）。
+  - 給 ELIVO 的啟示：即時輔助在每場對話 ROI 可衡量的場景（業務、客服）才賺得到錢。
 
-### (e) Wearables and hardware
+### (e) 穿戴裝置與硬體
 
-- **Plaud (NotePin, NotePin S, Note Pro).**
-  - Over 2M units shipped and over $100M software ARR (Jun 2026). About 50% of device owners pay for a subscription. Plaud Teams launched in 2026 ([TechCrunch](https://techcrunch.com/2026/06/16/plaud-says-its-software-business-topped-100m-in-arr-after-shipping-over-2m-ai-notetakers/)).
-  - About $250M annualised revenue in 2025 and profitable ([Forbes](https://www.forbes.com/sites/iainmartin/2025/09/02/how-an-ai-notetaker-became-one-of-the-few-profitable-ai-startups/)). It is targeting $500M in 2026 sales ([Bloomberg](https://www.bloomberg.com/news/articles/2026-06-16/plaud-plans-new-wearable-as-ai-note-taking-startup-eyes-500-million-in-sales)).
-  - Valuation reportedly about $2B, with a Tencent stake that both sides denied ([36Kr](https://eu.36kr.com/en/p/3799129165863937)).
-  - Devices are about $159–179; the Unlimited plan is $239.99/yr.
-- **Limitless.** Acquired by Meta in Dec 2025. The pendant was discontinued, Rewind was shut down on 2025-12-19, and service was withdrawn from the EU and UK ([TechCrunch](https://www.techcrunch.com/2025/12/05/meta-acquires-ai-device-startup-limitless/)).
-- **Bee.** Acquired by Amazon in Jul 2025. A $49.99 wristband that is still sold ([CNBC](https://www.cnbc.com/2025/07/22/amazon-ai-bee-wearable.html)).
-- **Omi.** Open-source pendant at about $129, with 25k+ units sold and a small seed round ([Omi](https://www.omi.me/)). Figures unverified.
-- **Humane AI Pin.** Assets sold to HP for $116M. Devices were bricked on 2025-02-28 after roughly 10k units shipped against a 100k target ([TechCrunch](https://techcrunch.com/2025/02/18/humanes-ai-pin-is-dead-as-hp-buys-startups-assets-for-116m)).
-- **Rabbit R1.** Employees reported months of unpaid wages in late 2025 ([Tom's Guide](https://www.tomsguide.com/ai/whats-next-for-rabbit-employees-say-they-havent-been-paid-for-months-while-company-teases-new-ai-hardware)).
-- **Chinese clones.** DingTalk A1 (RMB 499/799, Sep 2025) topped Tmall's recorder chart on Double 11 ([Sina](https://finance.sina.com.cn/tech/discovery/2025-10-30/doc-infvrtfr7300817.shtml)). Anker/ByteDance, Dreame and Mobvoi have launched similar products.
-- **Room devices.**
-  - Meeting Owl 5 Pro is Teams-certified ([BusinessWire](https://www.businesswire.com/news/home/20260203989764/en/Owl-Labs-Unveils-Next-Generation-Meeting-Owl-5-Pro-Expanding-Enterprise-Hybrid-Collaboration)).
-  - Logitech Sight does AI framing.
-  - HP Poly Studio Room Compute (NPU-based, Jul 2026) and VideoOS 5.1 ([HP](https://www.hp.com/us-en/newsroom/press-releases/2026/HP-debuts-ai-powered-unified-collaboration-ecosystem-at-infocomm-2026.html)).
-  - Taiwan's **AVer (圓展)** launched the CORE500 MTR kit ([ChannelTimes](https://channeltimes.com/aver-showcases-ai-ready-conferencing-and-pro-av-innovations-at-infocomm-asia-2026/)).
-  - Room AI today is audio/video framing plus platform notes. **No desk "insight display" product exists**, which is white space but also unproven demand.
+- **Plaud（NotePin、NotePin S、Note Pro）。**
+  - 出貨超過 2M 台，軟體 ARR 超過 $100M（2026 年 6 月）。約 50% 的裝置持有者付費訂閱。Plaud Teams 於 2026 年推出（[TechCrunch](https://techcrunch.com/2026/06/16/plaud-says-its-software-business-topped-100m-in-arr-after-shipping-over-2m-ai-notetakers/)）。
+  - 2025 年年化營收約 $250M 且已獲利（[Forbes](https://www.forbes.com/sites/iainmartin/2025/09/02/how-an-ai-notetaker-became-one-of-the-few-profitable-ai-startups/)）。目標 2026 年銷售額 $500M（[Bloomberg](https://www.bloomberg.com/news/articles/2026-06-16/plaud-plans-new-wearable-as-ai-note-taking-startup-eyes-500-million-in-sales)）。
+  - 據報估值約 $2B，並傳出騰訊入股，但雙方均否認（[36Kr](https://eu.36kr.com/en/p/3799129165863937)）。
+  - 裝置售價約 $159–179；Unlimited 方案每年 $239.99。
+- **Limitless。** 2025 年 12 月被 Meta 收購。吊墜裝置停產，Rewind 於 2025-12-19 關閉，並撤出歐盟與英國市場（[TechCrunch](https://www.techcrunch.com/2025/12/05/meta-acquires-ai-device-startup-limitless/)）。
+- **Bee。** 2025 年 7 月被 Amazon 收購。售價 $49.99 的手環，目前仍在販售（[CNBC](https://www.cnbc.com/2025/07/22/amazon-ai-bee-wearable.html)）。
+- **Omi。** 開源吊墜，售價約 $129，已售出 25k+ 台，完成小規模種子輪（[Omi](https://www.omi.me/)）。數據待驗證。
+- **Humane AI Pin。** 資產以 $116M 出售給 HP。裝置於 2025-02-28 停用變磚，當時出貨僅約 10k 台，遠低於 100k 的目標（[TechCrunch](https://techcrunch.com/2025/02/18/humanes-ai-pin-is-dead-as-hp-buys-startups-assets-for-116m)）。
+- **Rabbit R1。** 員工於 2025 年底反映已數月未領到薪資（[Tom's Guide](https://www.tomsguide.com/ai/whats-next-for-rabbit-employees-say-they-havent-been-paid-for-months-while-company-teases-new-ai-hardware)）。
+- **中國仿製品。** 釘釘 DingTalk A1（RMB 499/799，2025 年 9 月）在雙 11 登上天貓錄音筆榜首（[Sina](https://finance.sina.com.cn/tech/discovery/2025-10-30/doc-infvrtfr7300817.shtml)）。Anker／字節跳動、追覓（Dreame）與出門問問（Mobvoi）都已推出類似產品。
+- **會議室裝置。**
+  - Meeting Owl 5 Pro 已通過 Teams 認證（[BusinessWire](https://www.businesswire.com/news/home/20260203989764/en/Owl-Labs-Unveils-Next-Generation-Meeting-Owl-5-Pro-Expanding-Enterprise-Hybrid-Collaboration)）。
+  - Logitech Sight 具備 AI 取景功能。
+  - HP Poly Studio Room Compute（採用 NPU，2026 年 7 月）與 VideoOS 5.1（[HP](https://www.hp.com/us-en/newsroom/press-releases/2026/HP-debuts-ai-powered-unified-collaboration-ecosystem-at-infocomm-2026.html)）。
+  - 台灣的 **AVer（圓展）** 推出 CORE500 MTR 套件（[ChannelTimes](https://channeltimes.com/aver-showcases-ai-ready-conferencing-and-pro-av-innovations-at-infocomm-asia-2026/)）。
+  - 目前會議室 AI 僅止於音訊／影像取景加上平台筆記。**市場上沒有桌上型「洞察顯示器」產品**，這是空白市場，但需求也尚未獲得驗證。
 
-### (f) Taiwan and Chinese-language players
+### (f) 台灣與中文市場業者
 
-- **雅婷逐字稿 (Yating, Taiwan AI Labs / 雅婷智慧).**
-  - Around since 2017 and strong on Taiwan-accented Mandarin and Taiwanese. Pay-as-you-go at about NT$100/hour, falling to NT$8/hour on the 100-hour pack ([數位時代](https://fc.bnext.com.tw/solutions/view/yating)).
-  - Its enterprise offer is the **FedGPT** on-prem "sovereign AI" platform, which includes a Meeting Assistant.
-  - Its June 2026 survey (n=562): **72% of Taiwanese organisations want on-prem AI and 51% worry about data leakage** ([Taiwan AI Labs](https://ailabs.tw/news-room/more-than-half-of-taiwanese-enterprises-concerned-about-confidential-data-leakage-from-cloud-ai-over-70-want-ai-back-on-premises-yating-fedgpt-sovereign-ai-platform-enables-enterprises-to-build-secur/)).
-  - This is the most direct local competitor for enterprise and government deals.
-- **Vocol.ai (Taiwan).** Chinese/English/Japanese, claims 97%+ Traditional Chinese accuracy, Teams and Meet integration ([Vocol](https://www.vocol.ai/tw/home)). Funding unknown.
-- **Meeting Ink (迪威智能 DeepWave, Taiwan).** Live subtitles and translation; handles Taiwanese and Hakka ([Meeting Ink](https://ink.dwave.cc/zh-TW/news/85)).
-- Also local: CyberLink MyEdit and Tinrec 秒聽錄音. I could not verify "口袋逐字稿" as a distinct company.
-- **飛書妙記 Feishu/Lark Minutes.** Collaborative transcripts, 300 free minutes/month, bundled in Lark Pro at about $12/user ([Feishu](https://www.feishu.cn/product/minutes)).
-- **通義聽悟 Tongyi Tingwu (Alibaba).** Live transcription and translation, 20 free hours/month, "millions" of users ([Tingwu](https://tingwu.aliyun.com/)).
-- **訊飛聽見 iFlytek.** Real-time and offline transcription, claims 98% accuracy, and sells hardware such as the iFlybuds Pro 3 ([iflyrec](https://www.iflyrec.com/)). Current pricing unverified.
-- **騰訊會議 AI小助手 (Tencent Meeting).** Hunyuan-based live minutes, late-joiner catch-up and live-refreshing conclusions and to-dos ([Tencent](https://meeting.tencent.com/ai/)). Pricing unverified.
-- **Strategic note.** PRC tools are strong on Mandarin, but many Taiwanese enterprises, government bodies and regulated industries avoid PRC cloud services for security reasons. That is an opening for a Taiwan-built product.
+- **雅婷逐字稿（Yating，台灣人工智慧實驗室 Taiwan AI Labs／雅婷智慧）。**
+  - 自 2017 年起經營，擅長台灣口音華語與台語。依用量計費約每小時 NT$100，購買 100 小時方案可降至每小時 NT$8（[數位時代](https://fc.bnext.com.tw/solutions/view/yating)）。
+  - 其企業方案為 **FedGPT** 地端「主權 AI」平台，內含會議助理（Meeting Assistant）。
+  - 其 2026 年 6 月的調查（n=562）：**72% 的台灣組織希望採用地端 AI，51% 擔心資料外洩**（[Taiwan AI Labs](https://ailabs.tw/news-room/more-than-half-of-taiwanese-enterprises-concerned-about-confidential-data-leakage-from-cloud-ai-over-70-want-ai-back-on-premises-yating-fedgpt-sovereign-ai-platform-enables-enterprises-to-build-secur/)）。
+  - 這是企業與政府標案中最直接的本地競爭者。
+- **Vocol.ai（台灣）。** 支援中／英／日文，宣稱繁體中文準確率 97%+，整合 Teams 與 Meet（[Vocol](https://www.vocol.ai/tw/home)）。募資狀況不明。
+- **Meeting Ink（迪威智能 DeepWave，台灣）。** 即時字幕與翻譯；支援台語與客語（[Meeting Ink](https://ink.dwave.cc/zh-TW/news/85)）。
+- 其他本地業者：CyberLink MyEdit 與 Tinrec 秒聽錄音。我無法確認「口袋逐字稿」是否為獨立公司。
+- **飛書妙記 Feishu/Lark Minutes。** 協作式逐字稿，每月 300 分鐘免費，綁在 Lark Pro 中，每位使用者約 $12（[Feishu](https://www.feishu.cn/product/minutes)）。
+- **通義聽悟 Tongyi Tingwu（阿里巴巴）。** 即時轉錄與翻譯，每月 20 小時免費，使用者達「數百萬」（[Tingwu](https://tingwu.aliyun.com/)）。
+- **訊飛聽見 iFlytek。** 即時與離線轉錄，宣稱準確率 98%，並販售 iFlybuds Pro 3 等硬體（[iflyrec](https://www.iflyrec.com/)）。目前定價待驗證。
+- **騰訊會議 AI小助手（Tencent Meeting）。** 以混元為基礎的即時會議紀要、遲到者進度補上，以及即時更新的結論與待辦事項（[Tencent](https://meeting.tencent.com/ai/)）。定價待驗證。
+- **策略觀察。** 中國的工具在華語上表現強勁，但許多台灣企業、政府機關與受監管產業基於資安考量避免使用中國雲端服務。這為台灣自製產品提供了切入點。
 
 ---
 
-## 2. Market size (wide variance; treat as directional)
+## 2. 市場規模（差異極大；僅供方向參考）
 
-| Segment | Estimate | Growth | Source |
+| 區隔 | 估計值 | 成長率 | 來源 |
 |---|---|---|---|
-| AI meeting assistants | $3.14B (2025) → $9.33B (2030) | 24.3% CAGR | [TBRC](https://www.thebusinessresearchcompany.com/report/artificial-intelligence-ai-powered-meeting-assistants-global-market-report) |
-| AI meeting assistants | $3.5B (2025) → $21.5B (2033) | 25.8% | [Grand View](https://www.grandviewresearch.com/industry-analysis/ai-meeting-assistant-market-report) |
-| AI meeting assistants | $3.67B (2024) → $72B (2034) | 34.7% (aggressive) | [Market.us](https://market.us/report/ai-meeting-assistant-market/) |
-| AI note-taking (narrow) | $623.5M (2025) → $740M (2026) → $3.48B (2035) | 18.75%; APAC is the fastest-growing region | [Precedence](https://www.precedenceresearch.com/ai-note-taking-market) |
-| Conversation intelligence software | $21.9–28.5B (2025) | 8–15% | [Research&Markets](https://www.researchandmarkets.com/reports/6226068/conversation-intelligence-software-global-market), [SNS Insider](https://www.snsinsider.com/reports/conversation-intelligence-software-market-7165) (broad definitions that include contact-centre analytics) |
-| Speech-to-text API | $2.4–4.7B (2025) | ~18–21% | [Fortune BI](https://www.fortunebusinessinsights.com/speech-to-text-api-market-102781), [Mordor](https://www.giiresearch.com/report/moi2073020-speech-text-api-market-share-analysis-industry.html) |
-| Conference room hardware | $11.25B (2025) | n/a | [Mordor](https://www.mordorintelligence.com/industry-reports/conference-room-hardware-market) |
-| Video conferencing hardware | $7.0–8.7B (2025) | n/a | [Mordor](https://www.mordorintelligence.com/industry-reports/video-conferencing-hardware-market) |
+| AI 會議助理 | $3.14B（2025）→ $9.33B（2030） | 24.3% CAGR | [TBRC](https://www.thebusinessresearchcompany.com/report/artificial-intelligence-ai-powered-meeting-assistants-global-market-report) |
+| AI 會議助理 | $3.5B（2025）→ $21.5B（2033） | 25.8% | [Grand View](https://www.grandviewresearch.com/industry-analysis/ai-meeting-assistant-market-report) |
+| AI 會議助理 | $3.67B（2024）→ $72B（2034） | 34.7%（偏激進） | [Market.us](https://market.us/report/ai-meeting-assistant-market/) |
+| AI 筆記（狹義） | $623.5M（2025）→ $740M（2026）→ $3.48B（2035） | 18.75%；APAC 為成長最快的區域 | [Precedence](https://www.precedenceresearch.com/ai-note-taking-market) |
+| 對話智慧軟體 | $21.9–28.5B（2025） | 8–15% | [Research&Markets](https://www.researchandmarkets.com/reports/6226068/conversation-intelligence-software-global-market)、[SNS Insider](https://www.snsinsider.com/reports/conversation-intelligence-software-market-7165)（定義寬鬆，包含客服中心分析） |
+| 語音轉文字 API | $2.4–4.7B（2025） | ~18–21% | [Fortune BI](https://www.fortunebusinessinsights.com/speech-to-text-api-market-102781)、[Mordor](https://www.giiresearch.com/report/moi2073020-speech-text-api-market-share-analysis-industry.html) |
+| 會議室硬體 | $11.25B（2025） | 不適用 | [Mordor](https://www.mordorintelligence.com/industry-reports/conference-room-hardware-market) |
+| 視訊會議硬體 | $7.0–8.7B（2025） | 不適用 | [Mordor](https://www.mordorintelligence.com/industry-reports/video-conferencing-hardware-market) |
 
-**Sanity check from the bottom up.** Known vendor ARR already exceeds the "AI note-taking" estimates: Otter $100M, Plaud software $100M+, Gong $500M, Salesloft+Clari about $450M, Cresta about $100M (estimate), Fathom about $30M (estimate). Add about 30M paid Copilot seats at $21–30, some of which is meeting-driven. The realistic addressable pool for meeting intelligence is several billion dollars. For a pitch, use about $3–3.5B (2025) for AI meeting assistants at about 25% CAGR, and cite Grand View or TBRC rather than the $72B figure.
-
----
-
-## 3. White space analysis
-
-### What is genuinely underserved
-
-1. **Proactive, grounded, cross-source insight during the meeting.** The live features that exist fall into three kinds:
-   - Reactive Q&A: Ask Gemini, Zoom In-Meeting Questions, Otter's voice agent, Facilitator chat.
-   - Keyword battlecards: Kaia, Clari Copilot.
-   - Generic LLM whispers: Cluely, which is slow and generic.
-
-   None of them does unprompted checks against the organisation's decision log, prior proposals or numbers, with citations and a controlled false-positive rate. A search for "contradiction detection" turned up only forum requests and marketing copy ([Microsoft Q&A](https://learn.microsoft.com/en-nz/answers/questions/2336737/ai-meeting-agent-for-transcript-summarization-cont)). The hard parts are precision and restraint: when to stay silent, and how to cite the source. Those are also the defensible parts.
-2. **A structured "decision and commitment ledger" across meetings.** Summaries exist; a queryable, versioned record of decisions, numbers and owners that can be compared over time largely does not. This is what the insight cards need, and it is valuable on its own.
-3. **zh-TW and code-switched meetings.**
-   - Otter: Simplified Chinese only (beta), one language, no auto-detection ([Speakapp](https://speakapp.com/blog/otter-ai-languages)).
-   - Google: no Chinese at all.
-   - Teams AI notes: single language only.
-   - Taiwanese professionals routinely mix English terms into Mandarin sentences.
-   - Benchmarks: Whisper-large-v3 scores about 23% MER on the ASCEND code-switching set ([arXiv](https://arxiv.org/pdf/2311.17382)). MediaTek's Apache-2.0 **Breeze-ASR-25** claims 56% better code-switching than Whisper ([GitHub](https://github.com/mtkresearch/Breeze-ASR-25)), and Breeze-ASR-26 also exists.
-
-   Implication: ELIVO can get good ASR cheaply, and so can every competitor. Differentiate on post-ASR entity normalisation (company jargon, mixed-language names, Traditional Chinese output, terms like 報價/毛利) and on the knowledge layer.
-4. **On-prem, data-residency and bot-free enterprise deployment for APAC.** 72% of Taiwanese organisations want on-prem AI. Taiwan's AI Basic Act was promulgated in Jan 2026 and emphasises privacy and data governance ([Baker McKenzie](https://www.bakermckenzie.com/en/insight/publications/2026/01/taiwan-ai-basic-act)). US notetakers are cloud-only in the US. Yating FedGPT is the local incumbent here.
-5. **In-person meetings.** Google's in-person notes are English-only and capped at 15 minutes. Taiwan's conference-room culture (in-person client meetings, factory and supplier reviews) needs a room or desk device, which is where ELIVO's hardware could fit. Plaud Note Pro is closest, but it has no live insights.
-
-### How strong is the bundling threat?
-
-It is high for notes and medium for proactive insights.
-- Microsoft (30M+ paid Copilot seats), Zoom (AI Companion bundled into paid plans) and Google (Gemini in Business Standard at $14) give summaries away as part of the suite.
-- **Microsoft and Google are now blocking third-party bots.**
-  - Teams first required separate approval for detected external bots (MC1251206). It then added a tenant-wide `ExternalBotAccessMode` auto-block, rolling out from August 2026 ([UC Today](https://www.uctoday.com/unified-communications/microsoft-teams-to-block-external-bots-automatically-as-ai-notetaker-crackdown-hardens/)).
-  - Google Meet has flagged third-party bots as a "potential risk" since March 2026 ([UC Today](https://www.uctoday.com/security-compliance-risk/google-meet-launches-update-to-better-screen-suspicious-bots/)).
-- So ELIVO must be **bot-free**: local system-audio capture on the Mac, a device in the room, or an official platform app.
-
-The platforms' limits are ELIVO's opening:
-- They work only inside their own suite (Facilitator does not run in calls or instant meetings, and external participants are excluded).
-- They support one language per meeting.
-- Their proactivity is conservative, for liability reasons.
-- They are weak at knowledge outside their own suite (Notion, Confluence, local file shares, ERP numbers).
-- Mixed-platform meetings are common for consultants and sales teams who meet on the client's platform.
-
-### Where a Taiwan-based startup can win
-
-- **Beachhead:** Taiwanese and APAC consultants, PMs and B2B sales (including semiconductor supply-chain teams) running code-switched, cross-platform or in-person meetings with confidential numbers. A narrow wedge example is "commitment and price-consistency checks for supplier and customer meetings", where an 18% cost deviation card has obvious ROI.
-- **Enterprise:** a hybrid or on-prem deployment (a local ASR model plus a private LLM), with SOC 2 or ISO 27001 plus Taiwan PDPA alignment, positioned against PRC tools and US cloud tools.
-- **Distribution:** Taiwan SIs and Microsoft partners, and AV integrators. AVer, a Taiwanese room-hardware maker, is a potential partner rather than a competitor.
-- **Risk:** Yating or Taiwan AI Labs adds proactive cards to FedGPT, or Microsoft ships Facilitator with Traditional Chinese and proactive insights.
+**由下而上的合理性檢查。** 已知廠商的 ARR 已超過「AI 筆記」的市場估計：Otter $100M、Plaud 軟體 $100M+、Gong $500M、Salesloft+Clari 約 $450M、Cresta 約 $100M（估計）、Fathom 約 $30M（估計）。再加上約 30M 個單價 $21–30 的付費 Copilot 席次，其中部分由會議需求帶動。會議智慧實際可觸及的市場規模達數十億美元。簡報時建議採用 AI 會議助理約 $3–3.5B（2025）、約 25% CAGR 的數字，並引用 Grand View 或 TBRC，而非 $72B 那個數字。
 
 ---
 
-## 4. Pricing benchmarks (USD, per user per month; annual billing unless noted)
+## 3. 空白市場分析
 
-| Product | Free | Entry | Team/Business | Enterprise | Source |
+### 真正未被滿足的需求
+
+1. **會議中主動、有依據、跨來源的洞察。** 現有的即時功能分為三類：
+   - 被動式問答：Ask Gemini、Zoom In-Meeting Questions、Otter 的語音 agent、Facilitator 聊天。
+   - 關鍵字 battlecard：Kaia、Clari Copilot。
+   - 通用型 LLM 耳語：Cluely，速度慢且內容籠統。
+
+   沒有任何一款能在未經提示的情況下，對照組織的決策紀錄、過往提案或數字進行檢查，並附上引用來源、控制誤報率。搜尋「矛盾偵測（contradiction detection）」只找到論壇上的需求貼文與行銷文案（[Microsoft Q&A](https://learn.microsoft.com/en-nz/answers/questions/2336737/ai-meeting-agent-for-transcript-summarization-cont)）。困難之處在於精準度與克制：何時該保持沉默，以及如何引用來源。而這些也正是可建立防禦力的部分。
+2. **跨會議的結構化「決策與承諾帳本」。** 摘要已經很普遍；但一份可查詢、有版本控管、能隨時間比對決策、數字與負責人的紀錄，基本上還不存在。這正是洞察卡片所需要的，而且它本身就有價值。
+3. **zh-TW 與夾雜語會議。**
+   - Otter：僅支援簡體中文（測試版）、單一語言、無自動偵測（[Speakapp](https://speakapp.com/blog/otter-ai-languages)）。
+   - Google：完全不支援中文。
+   - Teams AI 筆記：僅支援單一語言。
+   - 台灣專業人士經常在華語句子中夾雜英文術語。
+   - 基準測試：Whisper-large-v3 在 ASCEND 夾雜語資料集上的 MER 約 23%（[arXiv](https://arxiv.org/pdf/2311.17382)）。聯發科以 Apache-2.0 授權釋出的 **Breeze-ASR-25** 宣稱夾雜語表現比 Whisper 好 56%（[GitHub](https://github.com/mtkresearch/Breeze-ASR-25)），此外也已有 Breeze-ASR-26。
+
+   意涵：ELIVO 可以低成本取得良好的 ASR，但所有競爭者也都可以。差異化應放在 ASR 之後的實體正規化（公司內部術語、混合語言名稱、繁體中文輸出、報價／毛利等術語）以及知識層。
+4. **針對 APAC 的地端、資料落地與無 bot 企業部署。** 72% 的台灣組織希望採用地端 AI。台灣《人工智慧基本法》於 2026 年 1 月公布，強調隱私與資料治理（[Baker McKenzie](https://www.bakermckenzie.com/en/insight/publications/2026/01/taiwan-ai-basic-act)）。美國的筆記工具只提供位於美國的雲端服務。雅婷 FedGPT 是這個領域的本地既有業者。
+5. **實體會議。** Google 的實體會議筆記僅支援英語，且上限 15 分鐘。台灣的會議室文化（與客戶面對面開會、工廠與供應商審查會議）需要會議室或桌上型裝置，這正是 ELIVO 硬體可以切入之處。Plaud Note Pro 最接近，但沒有即時洞察。
+
+### 綁售威脅有多大？
+
+對筆記而言威脅高，對主動式洞察而言威脅中等。
+- Microsoft（30M+ 付費 Copilot 席次）、Zoom（AI Companion 綁在付費方案中）與 Google（Business Standard 內含 Gemini，每月 $14）都把摘要功能當成套裝的一部分免費提供。
+- **Microsoft 與 Google 正在封鎖第三方 bot。**
+  - Teams 先是要求偵測到的外部 bot 需另行核准（MC1251206），接著又新增全租用戶範圍的 `ExternalBotAccessMode` 自動封鎖，自 2026 年 8 月起陸續推出（[UC Today](https://www.uctoday.com/unified-communications/microsoft-teams-to-block-external-bots-automatically-as-ai-notetaker-crackdown-hardens/)）。
+  - Google Meet 自 2026 年 3 月起將第三方 bot 標示為「潛在風險」（[UC Today](https://www.uctoday.com/security-compliance-risk/google-meet-launches-update-to-better-screen-suspicious-bots/)）。
+- 因此 ELIVO 必須做到 **無 bot**：在 Mac 上擷取本機系統音訊、在會議室放置裝置，或使用官方平台 app。
+
+各平台的限制正是 ELIVO 的機會：
+- 它們只能在自家套裝內運作（Facilitator 無法在通話或即時會議中運作，且排除外部與會者）。
+- 每場會議只支援一種語言。
+- 基於責任考量，它們的主動性相當保守。
+- 它們對自家套裝以外的知識（Notion、Confluence、本機檔案分享、ERP 數字）支援薄弱。
+- 對於在客戶平台上開會的顧問與業務團隊而言，混合平台的會議很常見。
+
+### 台灣新創可以在哪裡勝出
+
+- **灘頭堡：** 台灣與 APAC 的顧問、PM 與 B2B 業務（包括半導體供應鏈團隊），他們經常進行夾雜語、跨平台或實體會議，且涉及機密數字。一個狹窄切入點的例子是「供應商與客戶會議中的承諾與價格一致性檢查」，其中一張「成本偏離 18%」的卡片具有顯而易見的 ROI。
+- **企業：** 混合或地端部署（本地 ASR 模型加上私有 LLM），具備 SOC 2 或 ISO 27001 並符合台灣《個人資料保護法》（PDPA），定位為中國工具與美國雲端工具的替代方案。
+- **通路：** 台灣系統整合商（SI）與 Microsoft 合作夥伴，以及影音（AV）整合商。台灣會議室硬體廠商 AVer 是潛在的合作夥伴，而非競爭者。
+- **風險：** 雅婷或台灣人工智慧實驗室在 FedGPT 中加入主動式卡片，或 Microsoft 推出支援繁體中文與主動式洞察的 Facilitator。
+
+---
+
+## 4. 定價基準（美元，每位使用者每月；除另有註明外皆為年繳）
+
+| 產品 | 免費 | 入門 | 團隊／商務 | 企業 | 來源 |
 |---|---|---|---|---|---|
-| Otter | 300 min | Pro $8.33 ($16.99 mo) | Business $19.99 ($30 mo) | Custom | [Otter](https://otter.ai/pricing) |
-| Fireflies | Yes | Pro $10 ($18 mo) | Business $19 ($29 mo) | $39 | [Sonix](https://sonix.ai/resources/fireflies-ai-pricing/) |
-| Granola | 30-day history | — | Business $14 | $35 | [Granola](https://www.granola.ai/pricing) |
-| Fathom | Unlimited | Premium $16 | Team $15; Business $25 | Custom | [Fathom](https://www.fathom.ai/pricing) |
-| tl;dv | Yes | Pro $18 | Business $59 | Custom | [Claap](https://www.claap.io/blog/tl-dv-pricing) |
-| Read AI | Yes | Pro $15 | Enterprise $22.50 | Ent+ $29.75 | [eesel](https://www.eesel.ai/blog/read-ai-pricing) |
-| Notion AI Notes | — | — | Business $20 (bundled) | Custom | [Engadget](https://www.engadget.com/ai/notion-ai-can-transcribe-conversations-and-write-reports-but-itll-cost-you-130018464.html) |
-| Krisp | Yes | Pro $8 | Business $10 | Custom | [Krisp](https://krisp.ai/pricing/) |
-| Jamie | 10 meetings | Plus €25 | Team €39 | Custom | [Sally](https://www.sally.io/blog/jamie-ai-the-best-alternatives) |
-| Bluedot | Yes | Pro ~$20 | — | — | [Bluedot](https://www.bluedothq.com/pricing) (unverified) |
-| Avoma | Yes | $19 base | +$29 CI, +$29 RI (up to ~$77) | Custom | [Docket](https://docket.io/resources/research/avoma-pricing) |
-| Cluely | Yes | $11.99–19.99 | "Undetectable" $149.99 | Custom | [Cluely](https://cluely.com/pricing) |
-| Final Round AI | — | $25 (annual) to $90 (monthly) | — | — | [LoopCV](https://www.loopcv.pro/directory/finalround/) |
-| M365 Copilot (Facilitator) | — | Business $21 | Enterprise $30 (add-on) | — | [Microsoft](https://www.microsoft.com/en-us/microsoft-365-copilot/pricing) |
-| Zoom AI Companion / ZoomMate | Bundled in paid plans | Standalone $10 | Custom AI $12; ZoomMate from $20 | — | [Reworked](https://www.reworked.co/collaboration-productivity/zoom-launches-ai-companion-30-with-10-standalone-option/) |
-| Google Gemini in Meet | — | Bundled from Business Standard $14 | — | — | [eesel](https://www.eesel.ai/blog/gemini-workspace-pricing) |
-| Gong | — | ~$113–133 per seat equivalent ($1,360–1,600/yr) plus platform fee | — | — | [Oliv](https://www.oliv.ai/blog/gong-io-pricing) |
-| Lark (incl. Minutes) | Yes | Pro ~$12 | — | Custom | [Toolradar](https://toolradar.com/tools/lark/pricing) |
-| Yating 逐字稿 | 300 min trial | ~NT$100/hr, down to NT$8/hr in bulk | Enterprise on-prem (FedGPT) quote-based | — | [數位時代](https://fc.bnext.com.tw/solutions/view/yating) |
-| Plaud (hardware plus plan) | 300 min/mo | Pro $99.99/yr | Unlimited $239.99/yr; Team $20/user | — | [Plaud](https://www.plaud.ai/pages/plaud-ai-plan-pricing) |
-| Omi / Bee | Free tier | Omi $19 Plus / $29 Unlimited; Bee ~$12 (unverified) | — | — | [UMEVO](https://www.umevo.ai/blogs/ume-all-posts/omi-ai-wearable-deep-dive-subscription-cost-and-developer-kit-review) |
+| Otter | 300 分鐘 | Pro $8.33（月繳 $16.99） | Business $19.99（月繳 $30） | 客製 | [Otter](https://otter.ai/pricing) |
+| Fireflies | 有 | Pro $10（月繳 $18） | Business $19（月繳 $29） | $39 | [Sonix](https://sonix.ai/resources/fireflies-ai-pricing/) |
+| Granola | 30 天歷史紀錄 | — | Business $14 | $35 | [Granola](https://www.granola.ai/pricing) |
+| Fathom | 無限制 | Premium $16 | Team $15；Business $25 | 客製 | [Fathom](https://www.fathom.ai/pricing) |
+| tl;dv | 有 | Pro $18 | Business $59 | 客製 | [Claap](https://www.claap.io/blog/tl-dv-pricing) |
+| Read AI | 有 | Pro $15 | Enterprise $22.50 | Ent+ $29.75 | [eesel](https://www.eesel.ai/blog/read-ai-pricing) |
+| Notion AI Notes | — | — | Business $20（綁售） | 客製 | [Engadget](https://www.engadget.com/ai/notion-ai-can-transcribe-conversations-and-write-reports-but-itll-cost-you-130018464.html) |
+| Krisp | 有 | Pro $8 | Business $10 | 客製 | [Krisp](https://krisp.ai/pricing/) |
+| Jamie | 10 場會議 | Plus €25 | Team €39 | 客製 | [Sally](https://www.sally.io/blog/jamie-ai-the-best-alternatives) |
+| Bluedot | 有 | Pro ~$20 | — | — | [Bluedot](https://www.bluedothq.com/pricing)（待驗證） |
+| Avoma | 有 | 基本 $19 | +$29 CI、+$29 RI（最高約 $77） | 客製 | [Docket](https://docket.io/resources/research/avoma-pricing) |
+| Cluely | 有 | $11.99–19.99 | 「無法偵測」$149.99 | 客製 | [Cluely](https://cluely.com/pricing) |
+| Final Round AI | — | $25（年繳）至 $90（月繳） | — | — | [LoopCV](https://www.loopcv.pro/directory/finalround/) |
+| M365 Copilot（Facilitator） | — | Business $21 | Enterprise $30（加購） | — | [Microsoft](https://www.microsoft.com/en-us/microsoft-365-copilot/pricing) |
+| Zoom AI Companion / ZoomMate | 內含於付費方案 | 獨立方案 $10 | Custom AI $12；ZoomMate $20 起 | — | [Reworked](https://www.reworked.co/collaboration-productivity/zoom-launches-ai-companion-30-with-10-standalone-option/) |
+| Google Gemini in Meet | — | 自 Business Standard $14 起內含 | — | — | [eesel](https://www.eesel.ai/blog/gemini-workspace-pricing) |
+| Gong | — | 每席約 $113–133（每年 $1,360–1,600）另加平台費 | — | — | [Oliv](https://www.oliv.ai/blog/gong-io-pricing) |
+| Lark（含 Minutes） | 有 | Pro ~$12 | — | 客製 | [Toolradar](https://toolradar.com/tools/lark/pricing) |
+| 雅婷逐字稿 | 300 分鐘試用 | 每小時約 NT$100，大量購買可降至每小時 NT$8 | 企業地端（FedGPT）依報價 | — | [數位時代](https://fc.bnext.com.tw/solutions/view/yating) |
+| Plaud（硬體加方案） | 每月 300 分鐘 | Pro 每年 $99.99 | Unlimited 每年 $239.99；Team 每位使用者 $20 | — | [Plaud](https://www.plaud.ai/pages/plaud-ai-plan-pricing) |
+| Omi / Bee | 免費方案 | Omi $19 Plus／$29 Unlimited；Bee ~$12（待驗證） | — | — | [UMEVO](https://www.umevo.ai/blogs/ume-all-posts/omi-ai-wearable-deep-dive-subscription-cost-and-developer-kit-review) |
 
-**What this means for ELIVO's pricing.** Notes-only tools cluster at $8–20. ELIVO's Pro at $15–30 sits at or above Otter and Fireflies Business, so the insight cards have to justify the premium; around $20–25 is plausible. Team at $30–60 overlaps with Copilot ($30) and tl;dv Business ($59), which is defensible only with measurable ROI (sales, consulting) or on-prem. Enterprise custom with on-prem pricing, benchmarked against Gong's roughly $110–130 per seat, is realistic for regulated APAC buyers. Consider usage or credit metering for the heavy RAG and inference work, as Zoom, Gong, Fireflies and Supernormal all now do.
-
----
-
-## 5. Lessons: failures, controversies and fatigue
-
-1. **Consent and data-use litigation.**
-   - The Otter court held (2026-08-13) that a vendor which **trains on recordings** can be a "third-party eavesdropper" under CIPA ([Lawsuit Intelligencer](https://lawsuitintelligencer.com/otter-ai-cipa-ruling)).
-   - Fireflies faces BIPA liability over speaker voiceprints.
-   - NYC Bar Formal Opinion 2025-6 (Dec 2025) warns lawyers about AI notetakers and confidentiality ([PYMNTS](https://www.pymnts.com/news/artificial-intelligence/2026/the-meeting-bot-nobody-invited-is-now-exhibit-a)).
-   - Design implications for ELIVO:
-     - Train on no customer data by default.
-     - Show a visible consent indicator for all parties.
-     - Keep speaker identification optional and time-limited to reduce voiceprint and biometric risk.
-     - Offer retention controls.
-   - In Taiwan, recording by a participant is generally lawful under 通保法 §29, but covert recording by a non-party falls under 刑法 §315-1 ([亮遠法律](https://lylaw.tw/article-content.asp?ids=40)). An AI vendor that retains data for its own use raises the same "third party" question. Get local legal advice before selling to enterprises and government.
-2. **Bot fatigue and platform lockout.** Teams and Meet now block or flag bots, and corporate lawyers eject notetakers because transcripts become discoverable evidence. The market is shifting to bot-free capture (Granola, Wispr, Fathom's bot-free mode since Apr 2026). ELIVO should also offer "ephemeral mode": insights shown live, with no transcript retained.
-3. **"Undetectable" is a brand liability.** Cluely went viral, then faced an ARR retraction, latency complaints and a reported breach. ELIVO's "low-interruption" positioning should be transparent, not stealthy, especially for enterprise buyers.
-4. **Hardware.**
-   - Humane (about $230M raised, bricked in 10 months) and Rabbit show that a device must beat the phone or laptop at one specific job.
-   - Plaud shows the job can be "capture in-person meetings reliably", monetised through a roughly 50% software attach rate.
-   - Limitless and Bee show that big tech acquires this category rather than letting it scale independently.
-   - The Chinese supply chain copies designs within months (DingTalk A1).
-   - Recommendation: delay the display device until software retention is proven. Consider partnering with a Taiwanese ODM or AV firm (e.g., AVer) instead of building bespoke hardware first.
-5. **Consolidation.** Fathom went to Superhuman, Limitless to Meta, Bee to Amazon, and Salesloft merged with Clari. Standalone notetakers are becoming features. ELIVO's exit and defensibility depends on owning the **decision/knowledge graph plus real-time reasoning layer**, not capture.
+**對 ELIVO 定價的意涵。** 純筆記工具集中在 $8–20。ELIVO 的 Pro 方案定價 $15–30，與 Otter 和 Fireflies Business 相當或更高，因此洞察卡片必須撐得起這個溢價；約 $20–25 較為合理。Team 方案 $30–60 與 Copilot（$30）及 tl;dv Business（$59）重疊，唯有具備可衡量的 ROI（業務、顧問）或地端部署才站得住腳。企業方案採客製及地端定價，以 Gong 每席約 $110–130 為基準，對受監管的 APAC 買家而言是務實的。對於吃重的 RAG 與推論工作，可考慮以用量或點數計價，Zoom、Gong、Fireflies 與 Supernormal 目前都已這麼做。
 
 ---
 
-### Items I could not verify
+## 5. 教訓：失敗、爭議與疲乏
 
-- Fireflies' true ARR.
-- Granola's ARR and user counts.
-- Fathom's ARR (Latka estimate).
-- Cresta's $100M ARR (Sacra estimate).
-- Plaud's $2B valuation and Tencent stake (both parties denied).
-- The Cluely breach (disputed).
-- Bluedot and Supernormal current list prices (pricing changed in 2026).
-- Tencent Meeting and iFlytek current pricing.
-- "口袋逐字稿" as a distinct company.
-- AVer's revenue.
-- Facilitator's support for Traditional Chinese.
-- Granola's handling of code-switching within one meeting.
-- The Chorus acquisition date: aggregators show 2026, but my belief is July 2021, which I could not confirm in this session.
+1. **同意與資料使用訴訟。**
+   - Otter 案法院認定（2026-08-13），**以錄音內容訓練模型** 的廠商可能構成 CIPA 下的「第三方竊聽者」（[Lawsuit Intelligencer](https://lawsuitintelligencer.com/otter-ai-cipa-ruling)）。
+   - Fireflies 因說話者聲紋面臨 BIPA 責任。
+   - 紐約市律師公會正式意見 2025-6（NYC Bar Formal Opinion 2025-6，2025 年 12 月）提醒律師注意 AI 筆記工具與保密義務（[PYMNTS](https://www.pymnts.com/news/artificial-intelligence/2026/the-meeting-bot-nobody-invited-is-now-exhibit-a)）。
+   - 對 ELIVO 的設計意涵：
+     - 預設不使用任何客戶資料進行訓練。
+     - 向所有與會者顯示清楚可見的同意指示。
+     - 說話者辨識設為選用且有時間限制，以降低聲紋與生物特徵風險。
+     - 提供資料保存控制。
+   - 在台灣，依通保法 §29，會議參與者錄音一般屬合法，但非參與者的秘密錄音則觸及刑法 §315-1（[亮遠法律](https://lylaw.tw/article-content.asp?ids=40)）。若 AI 廠商為自身用途保留資料，也會引發相同的「第三方」疑義。向企業與政府銷售前，應先取得本地法律意見。
+2. **Bot 疲乏與平台封鎖。** Teams 與 Meet 現在會封鎖或標示 bot，企業法務也會把筆記工具踢出會議，因為逐字稿可能成為可被調閱的證據。市場正轉向無 bot 擷取（Granola、Wispr、Fathom 自 2026 年 4 月起的無 bot 模式）。ELIVO 也應提供「短暫模式（ephemeral mode）」：即時顯示洞察，不保留逐字稿。
+3. **「無法偵測」是品牌負債。** Cluely 爆紅後，接連遭遇 ARR 數字撤回、延遲抱怨與據報的資料外洩。ELIVO 的「低干擾」定位應該透明，而非隱匿，對企業買家尤其如此。
+4. **硬體。**
+   - Humane（募資約 $230M，10 個月內停用變磚）與 Rabbit 顯示，裝置必須在某項特定任務上勝過手機或筆電。
+   - Plaud 顯示這項任務可以是「可靠地擷取實體會議」，並透過約 50% 的軟體附加率變現。
+   - Limitless 與 Bee 顯示，大型科技公司會收購這個類別，而不是讓它獨立擴大規模。
+   - 中國供應鏈能在數個月內抄襲設計（釘釘 DingTalk A1）。
+   - 建議：在軟體留存率獲得驗證前，延後推出顯示裝置。考慮與台灣 ODM 或 AV 廠商（例如 AVer）合作，而非一開始就自行打造客製硬體。
+5. **整併。** Fathom 歸入 Superhuman，Limitless 歸入 Meta，Bee 歸入 Amazon，Salesloft 與 Clari 合併。獨立筆記工具正淪為一項功能。ELIVO 的出場與防禦力取決於掌握 **決策／知識圖譜加上即時推理層**，而非擷取。
+
+---
+
+### 無法驗證的項目
+
+- Fireflies 的真實 ARR。
+- Granola 的 ARR 與使用者數。
+- Fathom 的 ARR（Latka 估計）。
+- Cresta 的 $100M ARR（Sacra 估計）。
+- Plaud 的 $2B 估值與騰訊入股（雙方均否認）。
+- Cluely 資料外洩事件（有爭議）。
+- Bluedot 與 Supernormal 目前的定價（2026 年定價已變動）。
+- 騰訊會議與 iFlytek 目前的定價。
+- 「口袋逐字稿」是否為獨立公司。
+- AVer 的營收。
+- Facilitator 對繁體中文的支援。
+- Granola 在單一會議中處理夾雜語的能力。
+- Chorus 的收購日期：彙整網站顯示為 2026 年，但我認為是 2021 年 7 月，本次未能確認。
