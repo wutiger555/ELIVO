@@ -118,5 +118,16 @@ class Source:
                 self.spool = None
 
 
+async def start_source(source: "Source", timeout: float = 10.0):
+    """在背景執行緒開啟音訊裝置。第一次用麥克風時 macOS 會跳出權限詢問，使用者回應前 CoreAudio 會卡住；
+    放在 event loop 上會讓整個服務（API、WebSocket、關閉流程）一起停住。"""
+    import asyncio
+
+    try:
+        await asyncio.wait_for(asyncio.to_thread(source.start), timeout)
+    except asyncio.TimeoutError:
+        raise RuntimeError("無法開啟音訊裝置，可能在等待系統權限（系統設定 › 隱私權與安全性 › 麥克風）") from None
+
+
 def rms(chunk: np.ndarray) -> float:
     return float(np.sqrt(np.mean(chunk ** 2)))

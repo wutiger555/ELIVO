@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .asr.whisper_server import WhisperServer
-from .capture import Source, list_devices, rms
+from .capture import Source, list_devices, rms, start_source
 from .config import AUDIO_DIR, DB_PATH, SPOOL_DIR, WEB_DIST
 from .session import ACTIVE, SessionError, SessionManager
 from .store import Store
@@ -382,17 +382,20 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
         dev = device if device == "systap" or device.startswith("file:") else (int(device) if device.isdigit() else None)
         src = Source(dev, lambda c: loop.call_soon_threadsafe(on_chunk, c))
         try:
-            src.start()
+            await start_source(src)
             while True:
                 await asyncio.sleep(0.1)
                 await ws.send_text(json.dumps({"rms": round(level["v"], 4)}))
                 level["v"] = 0.0
-        except (WebSocketDisconnect, RuntimeError):
+        except WebSocketDisconnect:
             pass
         except Exception as e:
-            await ws.send_text(json.dumps({"error": str(e)}))
+            try:
+                await ws.send_text(json.dumps({"error": str(e)}))
+            except Exception:
+                pass
         finally:
-            src.stop()
+            await asyncio.to_thread(src.stop)
 
     # ---- 網頁 ----
 

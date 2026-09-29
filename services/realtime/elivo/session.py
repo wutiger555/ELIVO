@@ -18,7 +18,7 @@ import time
 import numpy as np
 
 from .asr.stream_engine import StreamEngine
-from .capture import SPEAKER_SLUG, Source, rms
+from .capture import SPEAKER_SLUG, Source, rms, start_source
 from .config import AUDIO_DIR, SPOOL_DIR
 from .minutes import MinutesEngine
 
@@ -181,8 +181,8 @@ class MeetingSession:
                 spool = None if self.ephemeral else SPOOL_DIR / f"{self.id}-{SPEAKER_SLUG.get(speaker, 'src')}.pcm"
                 source = Source(src.get("device"),
                                 lambda chunk, q=queue, sp=speaker: loop.call_soon_threadsafe(self._chunk, q, sp, chunk), spool)
-                source.start()
-                self.sources.append(source)
+                self.sources.append(source)   # 先加入清單：開啟失敗時 _close_capture 也會收掉
+                await start_source(source)
                 self.queues.append(queue)
                 self.tasks.append(asyncio.create_task(engine.run(queue)))
         except Exception as e:
@@ -193,7 +193,7 @@ class MeetingSession:
     async def _close_capture(self):
         self.base, self.resumed_at = self.clock(), None
         for s in self.sources:
-            s.stop()
+            await asyncio.to_thread(s.stop)   # 關閉裝置也走 CoreAudio，不放在 event loop 上
         for q in self.queues:
             q.put_nowait(None)  # 引擎收到 None 會把正在說的那一句定稿
         await asyncio.gather(*self.tasks)
