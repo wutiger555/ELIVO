@@ -1,3 +1,5 @@
+> **研究附錄**（2026-09-29 由研究代理以公開網路資料彙整；英文原文保留）。每項非顯而易見的主張均附來源；標示 *unverified* 者尚待一手資料確認。**非法律意見。**
+
 # ELIVO Due Diligence: Real-Time Conversation Intelligence, Competitive and Market Landscape (as of 2026-09-29)
 
 ## 0. Executive summary
