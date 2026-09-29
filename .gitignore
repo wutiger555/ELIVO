@@ -16,3 +16,6 @@ models/
 __pycache__/
 node_modules/
 .DS_Store
+
+# systap 編譯產物
+spikes/asr-realtime/systap/systap

@@ -58,8 +58,23 @@ Breeze 把「kickoff」辨識成「kick off」，因此術語召回為 80%。
 - 網頁：灰字暫定、黑字確定，切換正常；新連線會先收到完整快照（晚開的 iPad 也看得到前文）。
 - 與交接文件的預期（暫定 0.5–1.5 秒、確定 1.5–3 秒）相比：Breeze 的定稿延遲在範圍內，首字延遲偏慢約 0.3–0.5 秒，主因是每次推論固定約 1.1 秒。
 
-## 6. 待辦
+## 6. Step C：系統音訊（Core Audio process tap）
+
+依討論結果不裝 BlackHole（公司管理的電腦，裝音訊驅動需要管理員權限，可能違反 IT 政策），直接寫 Swift 小工具 `systap/`：
+
+- `CATapDescription(stereoGlobalTapButExcludeProcesses: [])` → `AudioHardwareCreateProcessTap` → 以預設輸出裝置為時鐘的私有 aggregate device → IO proc → `AVAudioConverter` 轉成 16 kHz mono → stdout。
+- tap 原生格式：48 kHz、float32、雙聲道。
+- **驗證一**：以 `afplay` 播放 19 秒合成音檔，同時用 systap 擷取；擷取結果經 Breeze 轉寫，**與直接轉寫原檔一字不差**。
+- **驗證二**：播放 52 秒合成會議，stream_demo 的「他人」那一路即時轉寫。7 句全部辨識，MER 8.6%；首字 p50 2.12 s、定稿 p50 2.86 s，比直接重播略慢，因為播放裝置本身也有延遲。
+- **雙路同時說話**（重播兩個檔案互相重疊，最壞情況）：推論排隊，定稿 p95 升到 4.85 s。
+
+待確認：
+
+- 終端機以外的啟動方式（例如之後的 Tauri app）要各自取得「系統錄音」權限。
+- 麥克風回音：用喇叭時會重複轉寫，正式版需要 AEC。這台機器目前以耳機測試為前提。
+
+## 7. 待辦
 
 - [ ] 真實中英混說會議錄音（取得同意，3–10 分鐘 × 1–3 段）＋ gold 逐字稿 → Step A 正式數字
 - [ ] Step B：真人麥克風實測、iPad 同 Wi-Fi 開啟驗證
-- [ ] Step C 系統音訊
+- [ ] Step C：實際 Zoom／Meet／Teams 會議中擷取（需要你開一場測試會議）

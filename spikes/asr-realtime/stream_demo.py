@@ -1,18 +1,24 @@
-"""Step B：即時麥克風 demo。
+"""Step B／C：即時逐字稿 demo。
 
 麥克風（或 --replay 音檔，以實際速度播放）→ Silero VAD → 滑動視窗 ASR → WebSocket → 網頁。
 網頁綁在 0.0.0.0，同一個 Wi-Fi 的 iPad／手機可以直接開。
+Step C：--system-device 再開一路系統音訊，標為「他人」；兩路共用同一個 ASR。
+  --system-device systap 用 Core Audio process tap（systap/，免安裝驅動）；也可以給 BlackHole 等輸入裝置。
 
 用法：
   python stream_demo.py                          # 預設麥克風、Breeze q8
   python stream_demo.py --list-devices
   python stream_demo.py --mic-device 2 --model turbo
   python stream_demo.py --replay ~/ELIVO-data/eval/datasets/meeting01.m4a --once
+  python stream_demo.py --system-device systap               # 麥克風＝我、系統音訊＝他人
 """
 import argparse
 import asyncio
 import json
+import signal
 import socket
+import subprocess
+import threading
 import time
 from datetime import datetime
 from http import HTTPStatus
@@ -30,6 +36,7 @@ from vad import CHUNK
 from whisper_server import WhisperServer
 
 PAGE = Path(__file__).parent / "static" / "index.html"
+SYSTAP = Path(__file__).parent / "systap" / "systap"
 
 
 class Hub:
@@ -100,15 +107,38 @@ class Stats:
         }
 
 
-def start_mic(loop, queue: asyncio.Queue, device):
+def start_input(loop, queue: asyncio.Queue, device):
+    """開輸入裝置；雙聲道（例如系統音訊）混成單聲道。CoreAudio 會自動轉成 16 kHz。"""
     import sounddevice as sd
 
-    def callback(indata, frames, t, status):
-        loop.call_soon_threadsafe(queue.put_nowait, indata[:, 0].copy())
+    channels = min(2, sd.query_devices(device, "input")["max_input_channels"])
 
-    stream = sd.InputStream(samplerate=SAMPLE_RATE, channels=1, dtype="float32", blocksize=CHUNK, device=device, callback=callback)
+    def callback(indata, frames, t, status):
+        loop.call_soon_threadsafe(queue.put_nowait, indata.mean(axis=1).astype(np.float32))
+
+    stream = sd.InputStream(samplerate=SAMPLE_RATE, channels=channels, dtype="float32", blocksize=CHUNK, device=device, callback=callback)
     stream.start()
     return stream
+
+
+class Systap:
+    """啟動 systap（Core Audio process tap），把 stdout 的 16 kHz mono float32 切成 chunk 送進 queue。"""
+
+    def __init__(self, loop, queue: asyncio.Queue):
+        if not SYSTAP.exists():
+            raise SystemExit(f"找不到 {SYSTAP}，請先執行 systap/build.sh")
+        self.proc = subprocess.Popen([str(SYSTAP)], stdout=subprocess.PIPE)
+        threading.Thread(target=self._read, args=(loop, queue), daemon=True).start()
+
+    def _read(self, loop, queue):
+        size = CHUNK * 4
+        while chunk := self.proc.stdout.read(size):
+            if len(chunk) == size:
+                loop.call_soon_threadsafe(queue.put_nowait, np.frombuffer(chunk, dtype="<f4").copy())
+
+    def stop(self):
+        self.proc.terminate()
+        self.proc.wait(timeout=5)
 
 
 async def replay(queue: asyncio.Queue, pcm: np.ndarray, speed: float):
@@ -138,35 +168,47 @@ async def main(args):
     load_s = asr.start()
     asr.transcribe(np.zeros(SAMPLE_RATE, dtype=np.float32))  # 暖機
     print(f"模型就緒（{load_s:.1f}s）", flush=True)
+    # SIGTERM 改成取消主任務，走正常的收尾流程（關 WebSocket、停 systap／whisper-server）
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, asyncio.current_task().cancel)
 
-    source = f"replay:{Path(args.replay).name}" if args.replay else "mic"
+    # 每一路：(說話者標籤, 輸入裝置, 重播檔)
+    channels = [("我", args.mic_device, args.replay)]
+    if args.system_device is not None or args.replay_system:
+        channels.append(("他人", args.system_device, args.replay_system))
+    replaying = any(c[2] for c in channels)
+    source = " + ".join(f"{who}:{Path(f).name if f else (dev if dev is not None else '預設麥克風')}" for who, dev, f in channels)
+
     hub = Hub({"model": args.model, "source": source})
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
     log_path = RUNS_DIR / datetime.now().strftime(f"stream-%Y%m%d-%H%M%S-{args.model}.jsonl")
     stats = Stats(hub, log_path)
 
-    queue: asyncio.Queue = asyncio.Queue()
-    engine = StreamEngine(asr, asyncio.Lock(), "我", hub.emit, step=args.step, min_silence=args.min_silence,
-                          max_utt=args.max_utt, prompt=args.prompt, on_record=stats.record)
+    lock = asyncio.Lock()  # 兩路共用一個 whisper-server，推論依序排隊
     loop = asyncio.get_running_loop()
-    mic = None
+    streams, jobs = [], []
     try:
-        async with serve(hub.handler, args.host, args.port, process_request=process_request):
+        async with serve(hub.handler, args.host, args.port, process_request=process_request, close_timeout=1):
             print(f"開啟：http://localhost:{args.port}  （iPad：http://{lan_ip()}:{args.port}）", flush=True)
-            if args.replay:
-                pcm = load_audio(Path(args.replay).expanduser())
-                await asyncio.gather(replay(queue, pcm, args.speed), engine.run(queue))
+            for who, device, replay_file in channels:
+                queue: asyncio.Queue = asyncio.Queue()
+                engine = StreamEngine(asr, lock, who, hub.emit, step=args.step, min_silence=args.min_silence,
+                                      max_utt=args.max_utt, prompt=args.prompt, on_record=stats.record)
+                jobs.append(engine.run(queue))
+                if replay_file:
+                    jobs.append(replay(queue, load_audio(Path(replay_file).expanduser()), args.speed))
+                elif device == "systap":
+                    streams.append(Systap(loop, queue))
+                else:
+                    streams.append(start_input(loop, queue, device))
+            print(f"收音中（{source}）；Ctrl-C 離開", flush=True)
+            await asyncio.gather(*jobs)
+            if replaying and not args.once:
                 print(json.dumps(stats.summary(), ensure_ascii=False))
-                if not args.once:
-                    print("重播結束，網頁保持開啟；Ctrl-C 離開", flush=True)
-                    await asyncio.Future()
-            else:
-                mic = start_mic(loop, queue, args.mic_device)
-                print("麥克風收音中；Ctrl-C 離開", flush=True)
-                await engine.run(queue)
+                print("重播結束，網頁保持開啟；Ctrl-C 離開", flush=True)
+                await asyncio.Future()
     finally:
-        if mic:
-            mic.stop()
+        for st in streams:
+            st.stop()
         asr.stop()
         print(f"紀錄：{log_path}")
         print(json.dumps(stats.summary(), ensure_ascii=False))
@@ -177,6 +219,9 @@ if __name__ == "__main__":
     ap.add_argument("--model", default="breeze-q8")
     ap.add_argument("--mic-device", type=lambda s: int(s) if s.isdigit() else s, default=None)
     ap.add_argument("--replay", help="用音檔代替麥克風（以實際速度播放）")
+    ap.add_argument("--system-device", type=lambda s: int(s) if s.isdigit() else s, default=None,
+                    help="系統音訊來源，標為「他人」：systap（Core Audio tap）或輸入裝置名稱／編號")
+    ap.add_argument("--replay-system", help="用音檔代替系統音訊")
     ap.add_argument("--speed", type=float, default=1.0)
     ap.add_argument("--once", action="store_true", help="重播結束就離開")
     ap.add_argument("--host", default="0.0.0.0")
@@ -193,5 +238,5 @@ if __name__ == "__main__":
     else:
         try:
             asyncio.run(main(args))
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, asyncio.CancelledError):
             pass

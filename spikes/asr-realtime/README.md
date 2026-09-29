@@ -77,3 +77,20 @@ cd spikes/asr-realtime
   - 定稿延遲：停止說話 → 整句定稿
   - 每次推論時間
 - 可調參數：`--step`、`--min-silence`、`--max-utt`、`--prompt`（術語）。
+
+## Step C：系統音訊（Core Audio process tap）
+
+不裝 BlackHole：`systap/` 是一個 Swift 小工具，用 macOS 14.2+ 的 Core Audio process tap 擷取所有系統輸出，轉成 16 kHz mono 寫到 stdout。
+
+```bash
+systap/build.sh                                                      # 需要 Xcode Command Line Tools
+~/.venvs/elivo-asr/bin/python stream_demo.py --system-device systap  # 麥克風＝我、系統音訊＝他人
+```
+
+- 第一次執行，macOS 會對啟動它的 App（終端機）詢問「系統錄音」權限。
+  - 權限在：系統設定 › 隱私權與安全性 › 螢幕與系統錄音。
+  - 沒有權限時 tap 仍會啟動，但只收到靜音；前 10 秒完全沒聲音時，systap 會提醒一次。
+- **請戴耳機**：用喇叭時麥克風會收到對方的聲音，同一句話會以「我」和「他人」各出現一次。正式版要用 `AVAudioEngine` voice processing（AEC）解決。
+- 兩路共用一個 whisper-server，同時說話時推論要排隊，延遲會變長。
+- 也可以給一般輸入裝置，例如 `--system-device "BlackHole 2ch"`。
+- 測試用：`--replay-system <音檔>` 以音檔代替系統音訊。
