@@ -1,0 +1,18 @@
+# 測試音檔與標註資料不入版控
+eval/datasets/
+*.wav
+*.m4a
+*.mp3
+
+# 模型權重
+models/
+*.bin
+*.gguf
+*.mlmodelc/
+
+# 環境
+.env
+.venv/
+__pycache__/
+node_modules/
+.DS_Store

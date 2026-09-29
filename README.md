@@ -31,6 +31,7 @@ ELIVO 在會議進行中，安靜地把「現在說的話」和「過去的決�
 | [`docs/05-validation-plan.md`](docs/05-validation-plan.md) | Phase 0 八週驗證計畫：訪談腳本、Wizard-of-Oz、ASR bake-off、Gate 0 決策表 |
 | [`docs/06-compliance-and-trust.md`](docs/06-compliance-and-trust.md) | 合規與信任設計清單（台灣、美國、EU、日本） |
 | [`docs/07-risk-register.md`](docs/07-risk-register.md) | 風險登記表 |
+| [`docs/08-handoff-local-dev.md`](docs/08-handoff-local-dev.md) | **目前的下一步**：本地 Mac 即時 ASR spike（硬體判斷、任務、產出） |
 | [`docs/adr/`](docs/adr/) | 架構與產品決策紀錄 |
 | [`docs/research/`](docs/research/) | 研究附錄（競品與市場、技術可行性、法規與 GTM，含來源連結） |
 

@@ -4,6 +4,8 @@ ELIVO（意聯）是一個即時對談智慧產品：不用 bot 的 Mac app，�
 
 專案目前在 Phase 0（驗證期）：repo 裡只有規劃文件，還沒有程式碼。
 
+**目前的下一步**：見 `docs/08-handoff-local-dev.md`，在本地 Mac 上實測即時中英混說 ASR（Breeze-ASR-25 / Whisper），spike 放在 `spikes/asr-realtime/`。
+
 ## 文件位置
 - `docs/01-research-report.md`：全盤調查與最終判斷。要改變產品方向前先讀這份。
 - `docs/02-project-plan.md`：修訂版計劃、路線圖與關卡。
