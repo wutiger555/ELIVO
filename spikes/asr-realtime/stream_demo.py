@@ -29,6 +29,7 @@ from pathlib import Path
 import numpy as np
 from websockets.asyncio.server import broadcast, serve
 from websockets.datastructures import Headers
+from websockets.exceptions import ConnectionClosed
 from websockets.http11 import Response
 
 from bench_offline import load_audio
@@ -68,6 +69,8 @@ class Hub:
             await ws.send(json.dumps({"type": "snapshot", "utts": list(self.utts.values()), "status": self.status}, ensure_ascii=False))
             async for _ in ws:
                 pass
+        except ConnectionClosed:
+            pass  # 瀏覽器分頁關掉、重新整理或 iPad 休眠時連線會直接斷掉，屬正常狀況
         finally:
             self.clients.discard(ws)
 
