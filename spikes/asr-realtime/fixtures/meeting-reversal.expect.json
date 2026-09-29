@@ -1,0 +1,13 @@
+{
+  "description": "meeting-reversal.txt 結束時，會議記錄應該呈現的狀態。每一條檢查：找出 kind 相符、文字（text／value／answer／owner 合併）包含 match 任一關鍵字的項目，再檢查欄位。",
+  "checks": [
+    {"name": "決策：改用 Salesforce（目前有效）", "kind": "decision", "match": ["Salesforce"], "status": ["confirmed"]},
+    {"name": "決策：HubSpot 被取代或撤銷", "kind": "decision", "match": ["HubSpot"], "exclude": ["Salesforce"], "status": ["superseded", "reversed"]},
+    {"name": "數字：預算 180 萬（現值）", "kind": "number", "match": ["180", "一百八十"], "status": ["current"]},
+    {"name": "數字：預算 120 萬被取代", "kind": "number", "match": ["120", "一百二十"], "status": ["superseded"]},
+    {"name": "問題：上線時間已回答（11 月底）", "kind": "question", "match": ["上線"], "status": ["answered"], "answer": ["11", "十一"]},
+    {"name": "待辦：計畫書由「我」負責", "kind": "action", "match": ["計畫書", "計劃書"], "status": ["open"], "owner": ["我"]},
+    {"name": "待辦：跟財務說明預算", "kind": "action", "match": ["財務"], "status": ["open"]},
+    {"name": "問題：data migration 誰負責（未答或延後）", "kind": "question", "match": ["data migration", "migration"], "status": ["open", "deferred"]}
+  ]
+}

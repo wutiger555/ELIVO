@@ -11,8 +11,7 @@ Step C：--system-device 再開一路系統音訊，標為「他人」；兩路�
   python stream_demo.py --mic-device 2 --model turbo
   python stream_demo.py --replay ~/ELIVO-data/eval/datasets/meeting01.m4a --once
   python stream_demo.py --system-device systap               # 麥克風＝我、系統音訊＝他人
-  python stream_demo.py --cards                              # Step D：右欄顯示 Claude Haiku 4.5 抽出的卡片
-  python stream_demo.py --cards --cards-provider ica --cards-model <id>   # 改用 IBM Consulting Advantage
+  python stream_demo.py --minutes                            # 會中持續修正的會議記錄（預設 ICA：Haiku 4.5 即時、Sonnet 4.6 整理）
 """
 import argparse
 import asyncio
@@ -33,7 +32,8 @@ from websockets.exceptions import ConnectionClosed
 from websockets.http11 import Response
 
 from bench_offline import load_audio
-from cards import CardExtractor, llm_cost
+from llm import llm_cost
+from minutes import MinutesEngine
 from config import RUNS_DIR, SAMPLE_RATE
 from stream_engine import StreamEngine
 from vad import CHUNK
@@ -65,8 +65,8 @@ class Hub:
                 self.utts[ev["id"]] = ev
         elif ev["type"] == "stats":
             self.status["stats"] = ev["stats"]
-        elif ev["type"] == "cards":
-            self.status["cards"] = ev["cards"]
+        elif ev["type"] == "minutes":
+            self.status["minutes"] = ev["minutes"]
         broadcast(self.clients, json.dumps(ev, ensure_ascii=False))
 
     async def handler(self, ws):
@@ -188,8 +188,22 @@ def lan_ip() -> str:
             return "127.0.0.1"
 
 
+async def finish_minutes(minutes: MinutesEngine):
+    """會議結束（重播完或 Ctrl-C）：跑完最後一次 fast 與整體整理，輸出 Markdown 會議記錄。網頁仍開著，看得到最終版。"""
+    print("整理最終會議記錄中…（再按一次 Ctrl-C 放棄）", flush=True)
+    try:
+        await asyncio.wait_for(minutes.finish(), timeout=120)
+    except (asyncio.CancelledError, asyncio.TimeoutError):
+        print("最終整理未完成，輸出目前版本", flush=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    md = RUNS_DIR / f"minutes-{stamp}.md"
+    md.write_text(minutes.to_markdown())
+    (RUNS_DIR / f"minutes-{stamp}.json").write_text(json.dumps(minutes.export(), ensure_ascii=False, indent=1))
+    print(f"會議記錄：{md}", flush=True)
+
+
 async def main(args):
-    asr = WhisperServer(args.model)
+    asr = WhisperServer(args.model, port=args.asr_port)
     print(f"載入 {args.model} …", flush=True)
     load_s = asr.start()
     asr.transcribe(np.zeros(SAMPLE_RATE, dtype=np.float32))  # 暖機
@@ -205,23 +219,27 @@ async def main(args):
     source = " + ".join(f"{who}:{Path(f).name if f else (dev if dev is not None else '預設麥克風')}" for who, dev, f in channels)
 
     status = {"model": args.model, "source": source}
-    if args.cards:
-        status["cards_model"] = args.cards_model or "claude-haiku-4-5"
+    if args.minutes:
+        status["minutes_models"] = f"{args.fast_model} · {args.reflect_model}"
     hub = Hub(status)
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
     log_path = RUNS_DIR / datetime.now().strftime(f"stream-%Y%m%d-%H%M%S-{args.model}.jsonl")
     stats = Stats(hub, log_path)
 
+    glossary = [t.strip() for t in Path(args.glossary).expanduser().read_text().splitlines() if t.strip()] if args.glossary else []
+    # 術語表同時給 Whisper（initial prompt，提高辨識率）與會議記錄的 LLM（校正發音相近的錯字）
+    asr_prompt = args.prompt or ("、".join(glossary) if glossary else None)
     emit = hub.emit
-    cards = None
-    if args.cards:
-        cards = CardExtractor(hub.emit, stats.record, provider=args.cards_provider, model=args.cards_model,
-                              interval=args.cards_interval)
+    minutes = None
+    if args.minutes:
+        minutes = MinutesEngine(hub.emit, stats.record, clock=lambda: time.monotonic() - hub.started,
+                                provider=args.llm_provider, fast_model=args.fast_model, reflect_model=args.reflect_model,
+                                fast_interval=args.fast_interval, reflect_interval=args.reflect_interval, glossary=glossary)
 
         def emit(ev):
-            hub.emit(ev)
+            hub.emit(ev)  # 會補上會議內時間碼 ev["t"]
             if ev["type"] == "utt" and ev["final"] and ev["committed"]:
-                cards.add_final(ev)
+                minutes.add_final(ev)
 
     lock = asyncio.Lock()  # 兩路共用一個 whisper-server，推論依序排隊
     loop = asyncio.get_running_loop()
@@ -232,7 +250,7 @@ async def main(args):
             for who, device, replay_file in channels:
                 queue: asyncio.Queue = asyncio.Queue()
                 engine = StreamEngine(asr, lock, who, emit, step=args.step, min_silence=args.min_silence,
-                                      max_utt=args.max_utt, prompt=args.prompt, on_record=stats.record)
+                                      max_utt=args.max_utt, prompt=asr_prompt, on_record=stats.record)
                 jobs.append(engine.run(queue))
                 if replay_file:
                     jobs.append(replay(queue, load_audio(Path(replay_file).expanduser()), args.speed))
@@ -241,13 +259,13 @@ async def main(args):
                 else:
                     streams.append(start_input(loop, queue, device))
             print(f"收音中（{source}）；Ctrl-C 離開", flush=True)
-            card_task = asyncio.create_task(cards.run()) if cards else None
-            await asyncio.gather(*jobs)
-            if cards:
-                card_task.cancel()
-                await cards.extract()  # 重播結束：把最後幾句也抽進卡片
-                for c in hub.status.get("cards", []):
-                    print(f"  [{c['kind']}] {c['text']}  {c['source']}")
+            minutes_task = asyncio.create_task(minutes.run()) if minutes else None
+            try:
+                await asyncio.gather(*jobs)
+            finally:
+                if minutes:
+                    minutes_task.cancel()
+                    await finish_minutes(minutes)
             if replaying and not args.once:
                 print(json.dumps(stats.summary(), ensure_ascii=False))
                 print("重播結束，網頁保持開啟；Ctrl-C 離開", flush=True)
@@ -272,14 +290,18 @@ if __name__ == "__main__":
     ap.add_argument("--once", action="store_true", help="重播結束就離開")
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--port", type=int, default=8765)
+    ap.add_argument("--asr-port", type=int, default=8178, help="whisper-server 的 port（同時跑兩個 demo 時要錯開）")
     ap.add_argument("--step", type=float, default=0.5, help="每累積幾秒新音訊重算一次")
     ap.add_argument("--min-silence", type=float, default=0.6, help="靜音幾秒視為句尾")
     ap.add_argument("--max-utt", type=float, default=15.0, help="單句最長秒數，超過就切")
-    ap.add_argument("--prompt", help="initial prompt，例如術語表")
-    ap.add_argument("--cards", action="store_true", help="Step D：用 LLM 抽出決策／待辦／未回答問題／數字")
-    ap.add_argument("--cards-provider", choices=["anthropic", "ica"], default="anthropic")
-    ap.add_argument("--cards-model", help="模型 id；anthropic 預設 claude-haiku-4-5，ica 必填")
-    ap.add_argument("--cards-interval", type=float, default=18.0, help="每幾秒抽一次卡片（有新句子才呼叫）")
+    ap.add_argument("--prompt", help="Whisper initial prompt（沒給時用 --glossary 的術語）")
+    ap.add_argument("--glossary", help="術語表檔案，一行一個；同時用於 ASR 與會議記錄校正")
+    ap.add_argument("--minutes", action="store_true", help="會中持續修正的會議記錄")
+    ap.add_argument("--llm-provider", choices=["ica", "anthropic"], default="ica")
+    ap.add_argument("--fast-model", default="claude-haiku-4-5", help="即時抽取用的模型")
+    ap.add_argument("--reflect-model", default="claude-sonnet-4-6", help="反思整理用的模型")
+    ap.add_argument("--fast-interval", type=float, default=12.0, help="每幾秒即時抽取一次（有新句子才呼叫）")
+    ap.add_argument("--reflect-interval", type=float, default=150.0, help="每幾秒整體整理一次")
     ap.add_argument("--list-devices", action="store_true")
     args = ap.parse_args()
     if args.list_devices:

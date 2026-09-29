@@ -173,34 +173,71 @@
     -webkit-backdrop-filter: var(--glass-blur);
     box-shadow: var(--glass-edge);
   }
-  #cards { padding: 16px 0 8px; display: flex; flex-direction: column; gap: 20px; }
+  #minutes { padding: 16px 0 8px; display: flex; flex-direction: column; gap: 24px; }
   .group-title { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font: var(--type-label); letter-spacing: var(--tracking-label); color: var(--text-3); }
   .group-title .n { margin-left: auto; color: var(--text-4); font-weight: 400; }
   .items { display: flex; flex-direction: column; gap: 8px; }
+  /* 摘要：每次反思整理後更新 */
+  .summary { display: flex; flex-direction: column; gap: 14px; }
+  .summary.rewrite { animation: rewrite var(--dur-surface) var(--ease-out); }
+  .topic-title { font: 500 14px/1.4 var(--font-sans); color: var(--text-1); margin-bottom: 4px; }
+  .topic ul { margin: 0; padding-left: 18px; }
+  .topic li { font: 400 14px/1.7 var(--font-sans); color: var(--text-2); text-wrap: pretty; }
   .item {
     position: relative;
     padding: 14px 16px;
     border-radius: var(--radius-md);
     background: var(--glass-fill);
     box-shadow: var(--glass-edge);
+    cursor: pointer;
     animation: elivo-surface var(--dur-surface) var(--ease-out);
+    transition: background var(--dur-fast) var(--ease-out), opacity var(--dur-slow) var(--ease-out);
   }
+  .item:hover { background: rgba(255, 255, 255, .085); }
   .item.fresh { animation: elivo-surface var(--dur-surface) var(--ease-out), fresh 2.6s var(--ease-out); }
+  .item.updated { animation: fresh 2.6s var(--ease-out); }
   @keyframes fresh { 0%, 30% { box-shadow: var(--glow-signal); } 100% { box-shadow: var(--glass-edge); } }
-  .item.gone { animation: gone var(--dur-base) var(--ease-out) forwards; }
-  @keyframes gone { to { opacity: 0; transform: translateY(-4px) scale(.98); filter: blur(3px); } }
-  .item-text { font: 500 15px/1.5 var(--font-sans); color: var(--text-1); text-wrap: pretty; }
-  .item-src {
+  /* 被取代、已回答、完成、取消：退到後面、變淡 */
+  .item.inactive { background: var(--glass-fill-thin); opacity: .62; }
+  .item.struck .item-text { text-decoration: line-through; text-decoration-color: var(--text-4); color: var(--text-3); }
+  .item-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .item-id { font: 500 11px/1 var(--font-mono); color: var(--text-4); }
+  .badge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 8px;
-    max-width: 100%;
-    font: 400 12.5px/1.5 var(--font-sans);
-    color: var(--text-3);
+    height: 20px;
+    padding: 0 8px;
+    border-radius: var(--radius-pill);
+    font: 500 11px/1 var(--font-sans);
+    background: var(--surface-hover);
+    color: var(--text-2);
   }
-  .item-src .q { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-  .item-src .ref { flex: none; font: 500 11px/1 var(--font-mono); color: var(--text-4); }
+  .badge.warn { background: var(--warn-soft); color: var(--warn); }
+  .badge.info { background: var(--info-soft); color: var(--info); }
+  .badge.accent { background: var(--accent-soft); color: var(--accent-text); }
+  .item-text { font: 500 15px/1.5 var(--font-sans); color: var(--text-1); text-wrap: pretty; }
+  .item-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 6px; font: 400 13px/1.5 var(--font-sans); color: var(--text-2); }
+  .item-meta b { font-weight: 500; color: var(--text-1); }
+  .item-change { margin-top: 8px; font: 400 12.5px/1.55 var(--font-sans); color: var(--text-3); text-wrap: pretty; }
+  .evidence { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .tc-chip {
+    height: 22px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    background: var(--surface-hover);
+    color: var(--text-3);
+    font: 500 11px/22px var(--font-mono);
+    cursor: pointer;
+  }
+  .tc-chip:hover { color: var(--accent-text); background: var(--accent-soft); }
+  .history { display: none; margin: 12px 0 0; padding: 12px 0 0; list-style: none; border-top: 1px solid var(--border); }
+  .item.open .history { display: block; }
+  .history li { display: grid; grid-template-columns: 58px 1fr; gap: 8px; padding: 3px 0; font: 400 12.5px/1.55 var(--font-sans); color: var(--text-3); }
+  .history .when { font: 400 11px/1.9 var(--font-mono); color: var(--text-4); }
+  .history .by { color: var(--accent-text); }
+  .utt.flash { animation: flash 1.6s var(--ease-out); border-radius: var(--radius-sm); }
+  @keyframes flash { 0%, 40% { background: var(--accent-soft); } 100% { background: transparent; } }
   .icon {
     flex: none;
     display: inline-block;
@@ -210,6 +247,7 @@
     -webkit-mask: var(--i) center / contain no-repeat;
     mask: var(--i) center / contain no-repeat;
   }
+  .tone-summary { color: var(--text-2); }
   .tone-decision { color: var(--accent-text); }
   .tone-action { color: var(--text-2); }
   .tone-question { color: var(--info); }
@@ -244,9 +282,9 @@
     <button class="jump" id="jump" type="button">回到最新</button>
   </section>
   <aside class="context">
-    <div class="label">Context <span class="meta" id="cards-model"></span></div>
+    <div class="label">Live minutes <span class="meta" id="minutes-meta"></span></div>
     <div class="scroll">
-      <div id="cards"><div class="placeholder" id="cards-empty">會中出現的決策、待辦、未回答問題與數字，會整理在這裡，並附上出處。</div></div>
+      <div id="minutes"><div class="placeholder" id="minutes-empty">會中出現的決策、待辦、問題與數字會整理在這裡；結論改變時，記錄會跟著改版，並保留修改紀錄與出處。</div></div>
     </div>
   </aside>
 </main>
@@ -254,15 +292,21 @@
 const $ = (id) => document.getElementById(id);
 const scroll = $("scroll"), transcript = $("transcript");
 const rows = new Map();          // id → { el, committed }
-const cardEls = new Map();       // key → element
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const ICON = (name) => `url("https://cdn.jsdelivr.net/npm/lucide-static@0.460.0/icons/${name}.svg")`;
 const GROUPS = [
-  { kind: "決策", label: "DECISIONS", icon: "milestone", tone: "decision" },
-  { kind: "待辦", label: "ACTION ITEMS", icon: "square-check", tone: "action" },
-  { kind: "未回答問題", label: "OPEN QUESTIONS", icon: "circle-help", tone: "question" },
-  { kind: "數字", label: "NUMBERS", icon: "hash", tone: "number" },
+  { kind: "decision", label: "DECISIONS", icon: "milestone", tone: "decision" },
+  { kind: "action", label: "ACTION ITEMS", icon: "square-check", tone: "action" },
+  { kind: "question", label: "QUESTIONS", icon: "circle-help", tone: "question" },
+  { kind: "number", label: "NUMBERS", icon: "hash", tone: "number" },
 ];
+// 各類型「仍有效」的狀態；其他狀態（被取代、已回答、完成…）變淡、排到後面
+const ACTIVE = { decision: ["confirmed"], action: ["open"], question: ["open"], number: ["current"] };
+const STATUS = {
+  superseded: ["已被取代", "warn"], reversed: ["已撤銷", "warn"], answered: ["已回答", "info"], deferred: ["延後", ""],
+  done: ["完成", "accent"], cancelled: ["取消", ""],
+};
+const STRUCK = ["superseded", "reversed", "cancelled"];
 let clockBase = 0, clockAt = performance.now(), stick = true;
 
 const pad = (n) => String(Math.floor(n)).padStart(2, "0");
@@ -352,58 +396,167 @@ function renderUtt(ev) {
   if (stick) follow();
 }
 
-// ---- Context：依類型分組；新出現或內容改變的項目短暫發光 ----
-function renderCards(list) {
-  $("cards-empty").hidden = list.length > 0;
-  const root = $("cards");
+// ---- Live minutes：有版本的會議記錄；改版的項目發光，點出處跳回逐字稿 ----
+const itemEls = new Map();   // id → { el, rev }
+let uttT = {}, summaryKey = "";
+
+function jumpTo(uttId) {
+  const row = rows.get(uttId);
+  if (!row) return;
+  stick = false;
+  $("jump").classList.add("show");
+  row.el.scrollIntoView({ block: "center", behavior: reduced ? "auto" : "smooth" });
+  row.el.classList.remove("flash"); void row.el.offsetWidth; row.el.classList.add("flash");
+}
+
+function section(root, key, label, iconName, tone) {
+  let sec = root.querySelector(`[data-kind="${key}"]`);
+  if (!sec) {
+    sec = document.createElement("section");
+    sec.dataset.kind = key;
+    const title = document.createElement("div");
+    title.className = `group-title tone-${tone}`;
+    const n = document.createElement("span");
+    n.className = "n";
+    title.append(icon(iconName, 13), label, n);
+    const box = document.createElement("div");
+    box.className = key === "summary" ? "summary" : "items";
+    sec.append(title, box);
+    if (key === "summary") root.prepend(sec); else root.append(sec);
+  }
+  return sec;
+}
+
+function fillItem(el, it) {
+  el.replaceChildren();
+  const head = document.createElement("div");
+  head.className = "item-head";
+  const id = document.createElement("span");
+  id.className = "item-id";
+  id.textContent = it.id;
+  head.append(id);
+  if (STATUS[it.status]) {
+    const b = document.createElement("span");
+    b.className = `badge ${STATUS[it.status][1]}`;
+    b.textContent = STATUS[it.status][0];
+    head.append(b);
+  }
+  if (it.history.length > 1 && !STATUS[it.status]) {
+    const b = document.createElement("span");
+    b.className = "badge accent";
+    b.textContent = "已更新";
+    head.append(b);
+  }
+  const text = document.createElement("div");
+  text.className = "item-text";
+  text.textContent = it.kind === "number" && it.value ? `${it.value}　${it.text}` : it.text;
+  el.append(head, text);
+
+  const meta = [];
+  if (it.owner) meta.push(["負責", it.owner]);
+  if (it.due) meta.push(["期限", it.due]);
+  if (it.answer) meta.push(["答案", it.answer]);
+  if (it.superseded_by) meta.push(["改為", it.superseded_by]);
+  if (meta.length) {
+    const m = document.createElement("div");
+    m.className = "item-meta";
+    for (const [k, v] of meta) {
+      const span = document.createElement("span");
+      span.append(k + " ", Object.assign(document.createElement("b"), { textContent: v }));
+      m.append(span);
+    }
+    el.append(m);
+  }
+  const last = it.history[it.history.length - 1];
+  if (last && it.history.length > 1) {
+    const c = document.createElement("div");
+    c.className = "item-change";
+    c.textContent = `↻ ${timecode(last.t)}　${last.change}`;
+    el.append(c);
+  }
+  const ev = document.createElement("div");
+  ev.className = "evidence";
+  for (const u of it.utt_ids.slice(0, 4)) {
+    if (uttT[u] == null) continue;
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "tc-chip";
+    chip.textContent = timecode(uttT[u]);
+    chip.title = `跳到 ${u}`;
+    chip.onclick = (e) => { e.stopPropagation(); jumpTo(u); };
+    ev.append(chip);
+  }
+  if (ev.childElementCount) el.append(ev);
+  const hist = document.createElement("ul");
+  hist.className = "history";
+  for (const r of it.history) {
+    const li = document.createElement("li");
+    li.innerHTML = '<span class="when"></span><span><span class="by"></span> <span class="what"></span></span>';
+    li.querySelector(".when").textContent = timecode(r.t);
+    li.querySelector(".by").textContent = r.by === "reflect" ? "整理" : "即時";
+    li.querySelector(".what").textContent = r.change;
+    hist.append(li);
+  }
+  el.append(hist);
+  el.classList.toggle("inactive", !ACTIVE[it.kind].includes(it.status));
+  el.classList.toggle("struck", STRUCK.includes(it.status));
+}
+
+function renderMinutes(m) {
+  uttT = m.utt_t || {};
+  const items = m.items.filter((it) => it.status !== "retracted");
+  $("minutes-empty").hidden = items.length > 0 || m.summary.length > 0;
+  const root = $("minutes");
+  const meta = [`v${m.version}`];
+  if (m.reflected_at != null) meta.push(`整理於 ${timecode(m.reflected_at)}`);
+  $("minutes-meta").textContent = meta.join(" · ");
+
+  // 摘要
+  const key = JSON.stringify(m.summary);
+  if (m.summary.length && key !== summaryKey) {
+    const box = section(root, "summary", "SUMMARY", "file-text", "summary").querySelector(".summary");
+    box.replaceChildren(...m.summary.map((t) => {
+      const d = document.createElement("div");
+      d.className = "topic";
+      const h = document.createElement("div");
+      h.className = "topic-title";
+      h.textContent = t.topic;
+      const ul = document.createElement("ul");
+      ul.append(...t.points.map((pt) => Object.assign(document.createElement("li"), { textContent: pt })));
+      d.append(h, ul);
+      return d;
+    }));
+    box.classList.remove("rewrite"); void box.offsetWidth; box.classList.add("rewrite");
+    summaryKey = key;
+  }
+
   const seen = new Set();
   for (const g of GROUPS) {
-    const items = list.filter((c) => c.kind === g.kind);
-    let sec = root.querySelector(`[data-kind="${g.kind}"]`);
-    if (!items.length) { sec?.remove(); continue; }
-    if (!sec) {
-      sec = document.createElement("section");
-      sec.dataset.kind = g.kind;
-      const title = document.createElement("div");
-      title.className = `group-title tone-${g.tone}`;
-      title.append(icon(g.icon, 13), g.label);
-      const n = document.createElement("span");
-      n.className = "n";
-      title.append(n);
-      const box = document.createElement("div");
-      box.className = "items";
-      sec.append(title, box);
-      root.append(sec);
-    }
-    sec.querySelector(".n").textContent = items.length;
+    const list = items.filter((it) => it.kind === g.kind);
+    if (!list.length) { root.querySelector(`[data-kind="${g.kind}"]`)?.remove(); continue; }
+    const sec = section(root, g.kind, g.label, g.icon, g.tone);
+    sec.querySelector(".n").textContent = list.filter((it) => ACTIVE[g.kind].includes(it.status)).length;
     const box = sec.querySelector(".items");
-    for (const c of items) {
-      const key = g.kind + "|" + c.text;
-      seen.add(key);
-      if (cardEls.has(key)) continue;
-      const el = document.createElement("div");
-      el.className = "item fresh";
-      const text = document.createElement("div");
-      text.className = "item-text";
-      text.textContent = c.text;
-      const src = document.createElement("div");
-      src.className = "item-src";
-      const m = /^「(.*)」· (.+)$/.exec(c.source || "");
-      const q = document.createElement("span");
-      q.className = "q";
-      q.textContent = m ? `「${m[1]}」` : c.source || "";
-      src.append(icon("corner-down-right", 12), q);
-      if (m) { const r = document.createElement("span"); r.className = "ref"; r.textContent = m[2]; src.append(r); }
-      el.append(text, src);
-      box.append(el);
-      cardEls.set(key, el);
+    // 仍有效的在前，其餘依編號
+    list.sort((a, b) => (ACTIVE[g.kind].includes(b.status) - ACTIVE[g.kind].includes(a.status)) || a.id.localeCompare(b.id, "en", { numeric: true }));
+    for (const it of list) {
+      seen.add(it.id);
+      let rec = itemEls.get(it.id);
+      if (!rec) {
+        const el = document.createElement("div");
+        el.className = "item fresh";
+        el.onclick = () => el.classList.toggle("open");
+        rec = { el, rev: 0 };
+        itemEls.set(it.id, rec);
+      } else if (it.history.length > rec.rev) {
+        rec.el.classList.remove("fresh", "updated"); void rec.el.offsetWidth; rec.el.classList.add("updated");
+      }
+      if (it.history.length !== rec.rev) { fillItem(rec.el, it); rec.rev = it.history.length; }
+      box.append(rec.el);   // 依排序重新排列（已在的元素會被移動，不會重建）
     }
   }
-  for (const [key, el] of cardEls) {
-    if (seen.has(key)) continue;
-    cardEls.delete(key);
-    el.classList.add("gone");
-    el.addEventListener("animationend", () => el.remove(), { once: true });
+  for (const [id, rec] of itemEls) {
+    if (!seen.has(id)) { rec.el.remove(); itemEls.delete(id); }
   }
 }
 
@@ -426,12 +579,11 @@ function connect() {
       ev.utts.forEach(renderUtt);
       clockBase = ev.status.elapsed || 0; clockAt = performance.now();
       $("source").textContent = `${ev.status.source} · ${ev.status.model}`;
-      $("cards-model").textContent = ev.status.cards_model || "";
       renderStats(ev.status.stats);
-      if (ev.status.cards) renderCards(ev.status.cards);
+      if (ev.status.minutes) renderMinutes(ev.status.minutes);
     } else if (ev.type === "utt") renderUtt(ev);
     else if (ev.type === "stats") renderStats(ev.stats);
-    else if (ev.type === "cards") renderCards(ev.cards);
+    else if (ev.type === "minutes") renderMinutes(ev.minutes);
   };
 }
 connect();

@@ -101,23 +101,32 @@ systap/build.sh                                                      # 需要 Xc
 - 也可以給一般輸入裝置，例如 `--system-device "BlackHole 2ch"`。
 - 測試用：`--replay-system <音檔>` 以音檔代替系統音訊。
 
-## Step D：卡片雛形（LLM 抽取）
+## 階段二：會中持續修正的會議記錄（Live Minutes）
 
 ```bash
-# 目前使用 IBM Consulting Advantage（ICA），金鑰存在鑰匙圈的 elivo-ica-api-key
-security add-generic-password -a "$USER" -s elivo-ica-api-key -w      # 只要做一次
-~/.venvs/elivo-asr/bin/python cards.py --list-ica-models              # 列出可用模型
-~/.venvs/elivo-asr/bin/python stream_demo.py --cards --cards-provider ica --cards-model claude-haiku-4-5 --system-device systap
+~/.venvs/elivo-asr/bin/python stream_demo.py --system-device systap --minutes --glossary 術語表.txt
+~/.venvs/elivo-asr/bin/python llm.py --list-ica-models     # 列出 ICA 可用模型
 ```
 
-- 供應商放在 Provider 介面後面（ADR-0002），用 `--cards-provider` 切換：
-  - `ica`：IBM Consulting Advantage，OpenAI 相容的 `/chat-models/chat/completions`，Bearer 驗證。
-    - 沒有 structured outputs：JSON schema 寫在 prompt 裡，回覆用 Pydantic 驗證，不合格就丟棄這一輪。
-    - 可用模型含 `claude-haiku-4-5`（經 AWS Bedrock）、GPT、Gemini、Granite 等。
-  - `anthropic`：直接呼叫 Anthropic API（structured outputs），金鑰在鑰匙圈的 `elivo-anthropic-api-key`；需要組織的 Claude Console 有額度。
-- 每 18 秒（`--cards-interval`），**有新定稿句子才呼叫**。每次送「上一次的抽取結果＋最近 150 句逐字稿」，模型延續並修正。
-- 抽出：決策、待辦（負責人、期限）、未回答問題、數字。每一項附逐字稿原文與句子 id。
-- 依 ADR-0003：prompt 明確禁止判斷情緒、態度或參與度。
-- 金鑰不要 export 在 `.zshrc`（`ANTHROPIC_API_KEY` 會讓 Claude Code 也改用那把金鑰計費）。
-- 逐字稿會送到雲端 LLM：錄音同意書要涵蓋「逐字稿送雲端 AI 摘要」。
-- 延遲與 token 數寫在 `stream-*.jsonl`（`type: llm`）。
+- 記錄是一份**有版本的狀態**（`minutes.py`）：決策、待辦、問題、數字各有固定 id（D1、A2…）與狀態；被取代、回答、換負責人時改狀態，不刪除，每次變更寫入 history（時間、依據句子、fast／reflect、理由）。
+- **fast**（預設 `claude-haiku-4-5`，每 12 秒、有新句子才跑）只輸出操作 add／update／supersede／resolve／retract，由程式套用。
+- **reflect**（預設 `claude-sonnet-4-6`，每 150 秒）重讀全文，輸出修正後的完整記錄與分主題摘要，程式比對差異寫入 history。
+  - 整理開始前先讓 fast 追上所有句子，整理期間 fast 只處理之後的新句子，避免兩邊重複新增。
+  - 整理期間被 fast 改過的項目不會被覆蓋。
+  - 模型額度用完（ICA Frontier Models）時自動改用 fast 的模型。
+- `--glossary`：術語表同時給 Whisper（initial prompt）與 LLM（只校正發音明顯相近的錯字）。
+- 會議結束（重播完或 Ctrl-C）時跑最後一次整理，輸出 `~/ELIVO-data/runs/minutes-*.md` 與 `.json`。
+- 網頁右欄：摘要、決策、待辦、問題、數字；被取代的項目劃線變淡並註明改為哪一項；更新的項目發光並顯示最近一次變更；點時間碼跳回逐字稿；點項目展開修改紀錄。
+- LLM 供應商在 `llm.py`（ADR-0002）：`ica`（IBM Consulting Advantage，schema 放 prompt、Pydantic 驗證）或 `anthropic`（structured outputs）。金鑰從鑰匙圈讀取。
+- 依 ADR-0003：prompt 明確禁止判斷情緒、態度或參與度。逐字稿會送到雲端 LLM，錄音同意書要涵蓋這一點。
+
+### 驗證：中途推翻決議的合成會議
+
+```bash
+~/.venvs/elivo-asr/bin/python synth_meeting.py meeting-reversal          # 產生「我／他人」兩軌
+D=~/ELIVO-data/eval/datasets/synthetic
+~/.venvs/elivo-asr/bin/python stream_demo.py --minutes --once --reflect-interval 45 \
+  --glossary fixtures/meeting-reversal.glossary.txt \
+  --replay $D/meeting-reversal-me.wav --replay-system $D/meeting-reversal-other.wav
+~/.venvs/elivo-asr/bin/python eval_minutes.py meeting-reversal           # 對照 fixtures/*.expect.json
+```

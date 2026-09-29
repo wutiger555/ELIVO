@@ -92,9 +92,26 @@ Breeze 把「kickoff」辨識成「kick off」，因此術語召回為 80%。
   - 「客戶問 SSO 什麼時候上線，我們還沒有答案」應該是**未回答問題**，卻被當成決策。
   - 句子來源（utt_id 與原文）都有附上，可以追溯。
 
-## 8. 待辦
+## 8. 階段二：會中持續修正的會議記錄
+
+合成會議 `fixtures/meeting-reversal.txt`（16 句、92 秒、兩軌），中途推翻決議：HubSpot → Salesforce、預算 120 萬 → 180 萬、上線時間由未知 → 11 月底、計畫書負責人由他人 → 我、data migration 延後討論。以 `eval_minutes.py` 對照 8 條預期結果：
+
+| 版本 | 通過 | 主要問題 |
+|---|---|---|
+| 初版 | 4／8 | reflect 與 fast 同時新增同一件事（重複項目）；「我來寫」被記成「問題已回答」而不是待辦；品牌名辨識錯誤（HubSpot → Hotspot、Salesforce → SolarSport） |
+| 修正後＋術語表 | **7／8** | 唯一未過：TTS 把「data migration」唸成 ASR 聽到的「delta v 賺錢」，屬於合成語音問題 |
+
+- 修正內容：
+  - reflect 開始前先讓 fast 追上，整理期間 fast 只處理之後的新句子。
+  - prompt 規定承諾類語句（我來、我會）一定記成待辦並填負責人。
+  - 術語表同時給 ASR 與 LLM：HubSpot、Salesforce 在逐字稿中全部辨識正確。
+- 發現術語表會被**過度套用**：LLM 把一般詞「匯入計劃書」改成「data migration 計劃書」、把「SAP 整合」改成「Salesforce 整合」。已在 prompt 限制只校正發音明顯相近的字詞。
+- 延遲：fast 每次 2–5 秒；reflect（Haiku 4.5）4–10 秒。
+- **ICA 額度**：Sonnet 4.6 跑了一次整理後，團隊的 Frontier Models 額度用完（HTTP 400）。目前只能用免費模型（cost tier 0x：Claude Haiku 4.5、Granite、Llama 4、Gemma 4）；程式會自動改用 fast 的模型。
+
+## 9. 待辦
 
 - [ ] 真實中英混說會議錄音（取得同意，3–10 分鐘 × 1–3 段）＋ gold 逐字稿 → Step A 正式數字
 - [ ] Step B：真人麥克風實測、iPad 同 Wi-Fi 開啟驗證
 - [ ] Step C：實際 Zoom／Meet／Teams 會議中擷取（需要你開一場測試會議）
-- [ ] Step D：調整抽取 prompt，減少過度連結與腦補；比較 ICA 上其他模型的延遲與品質
+- [ ] 會議記錄：用真實會議量 decision／action 的 F1（S3 spike）；比較 ICA 免費模型的整理品質
