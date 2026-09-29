@@ -1,0 +1,71 @@
+:root{
+/* Void — cool graphite neutrals, faint blue cast */
+--void-0:#05070B;--void-1:#0A0D13;--void-2:#10141C;--void-3:#171C26;--void-4:#222936;--void-5:#313A4A;--void-6:#4A5568;
+/* Haze — text greys on dark */
+--haze-1:#EEF2F7;--haze-2:#BCC4D0;--haze-3:#8691A1;--haze-4:#5A6475;
+/* Frost — light surfaces */
+--frost-0:#FFFFFF;--frost-1:#F3F5F8;--frost-2:#E8ECF1;--frost-3:#D6DCE4;--frost-4:#AEB7C3;
+/* Ion — primary accent (aquamarine). "This matters now." */
+--ion-200:#D2FFF5;--ion-300:#A3FBEA;--ion-400:#72F7DE;--ion-500:#3FEFCF;--ion-600:#14C9A8;--ion-700:#067A67;
+/* Ember — conflict / drift */
+--ember-400:#FFB38A;--ember-500:#FF8F5A;--ember-700:#9A4214;
+/* Cryo — documents / info */
+--cryo-400:#B5CCFF;--cryo-500:#8FB0FF;--cryo-700:#2F55B8;
+/* Rose — REC / destructive */
+--rose-400:#FF8AA0;--rose-500:#FF5C7A;--rose-700:#B0203F;
+
+/* Semantic aliases — dark (default) */
+--bg:var(--void-0);
+--surface-1:var(--void-1);
+--surface-2:var(--void-2);
+--surface-3:var(--void-3);
+--surface-hover:rgba(255,255,255,.06);
+--surface-press:rgba(255,255,255,.10);
+--border:rgba(255,255,255,.08);
+--border-strong:rgba(255,255,255,.16);
+--text-1:var(--haze-1);
+--text-2:var(--haze-2);
+--text-3:var(--haze-3);
+--text-4:var(--haze-4);
+--accent:var(--ion-500);
+--accent-hover:var(--ion-400);
+--accent-fg:var(--void-0);
+--accent-text:var(--ion-500);
+--accent-soft:rgba(63,239,207,.12);
+--accent-ring:rgba(63,239,207,.38);
+--warn:var(--ember-500);
+--warn-soft:rgba(255,143,90,.14);
+--danger:var(--rose-500);
+--danger-soft:rgba(255,92,122,.14);
+--info:var(--cryo-500);
+--info-soft:rgba(143,176,255,.14);
+--rec:var(--rose-500);
+--overlay:rgba(3,5,8,.55);
+}
+[data-theme="light"]{
+--bg:var(--frost-1);
+--surface-1:var(--frost-0);
+--surface-2:var(--frost-2);
+--surface-3:var(--frost-3);
+--surface-hover:rgba(10,13,19,.05);
+--surface-press:rgba(10,13,19,.09);
+--border:rgba(10,13,19,.08);
+--border-strong:rgba(10,13,19,.16);
+--text-1:var(--void-1);
+--text-2:#353D4B;
+--text-3:#667080;
+--text-4:#98A1AE;
+--accent:var(--void-1);
+--accent-hover:var(--void-3);
+--accent-fg:var(--ion-400);
+--accent-text:var(--ion-700);
+--accent-soft:rgba(20,201,168,.14);
+--accent-ring:rgba(6,122,103,.34);
+--warn:var(--ember-700);
+--warn-soft:rgba(255,143,90,.16);
+--danger:var(--rose-700);
+--danger-soft:rgba(255,92,122,.12);
+--info:var(--cryo-700);
+--info-soft:rgba(143,176,255,.20);
+--overlay:rgba(243,245,248,.45);
+}

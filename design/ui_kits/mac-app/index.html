@@ -1,0 +1,18 @@
+<!-- @dsCard group="Mac App" viewport="1280x800" name="ELIVO for Mac" subtitle="Brief → Live (transcript + context) → Confirm → Summary" -->
+<!doctype html><html><head><meta charset="utf-8"><title>ELIVO for Mac</title><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>html,body,#root{height:100%}body{padding:0}</style></head><body><div id="root"></div>
+<script type="text/babel" src="Shell.jsx"></script><script type="text/babel" src="BriefScreen.jsx"></script><script type="text/babel" src="LiveScreen.jsx"></script><script type="text/babel" src="SummaryScreen.jsx"></script>
+<script type="text/babel">
+function App(){
+  const [s,setS]=React.useState(()=>localStorage.getItem('elivo-kit-screen')||'live');
+  React.useEffect(()=>localStorage.setItem('elivo-kit-screen',s),[s]);
+  const nav=<div style={{position:'fixed',left:'50%',bottom:14,transform:'translateX(-50%)',display:'flex',gap:2,padding:3,borderRadius:999,background:'var(--glass-fill-strong)',backdropFilter:'var(--glass-blur-heavy)',WebkitBackdropFilter:'var(--glass-blur-heavy)',boxShadow:'var(--glass-shadow)',zIndex:200}}>
+    {[['brief','會前'],['live','會中'],['summary','會後']].map(([k,l])=><button key={k} onClick={()=>setS(k)} style={{border:0,borderRadius:999,padding:'8px 14px',cursor:'pointer',font:'500 12px/1 var(--font-sans)',background:s===k?'var(--surface-3)':'transparent',color:s===k?'var(--text-1)':'var(--text-3)'}}>{l}</button>)}</div>;
+  return <div style={{height:'100%',padding:16}}>{s==='brief'&&<BriefScreen onStart={()=>setS('live')}/>}{s==='live'&&<LiveScreen onEnd={()=>setS('summary')}/>}{s==='summary'&&<SummaryScreen onBack={()=>setS('brief')}/>}{nav}</div>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script></body></html>

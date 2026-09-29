@@ -1,0 +1,8 @@
+:root{
+--space-0:0;--space-1:2px;--space-2:4px;--space-3:8px;--space-4:12px;--space-5:16px;--space-6:20px;--space-7:24px;--space-8:32px;--space-9:40px;--space-10:56px;--space-11:80px;--space-12:120px;
+/* iOS-style continuous, generous corners */
+--radius-xs:6px;--radius-sm:10px;--radius-md:16px;--radius-lg:22px;--radius-xl:28px;--radius-pill:999px;
+--control-h-sm:30px;--control-h-md:38px;--control-h-lg:50px;
+--hairline:1px;
+--content-max:1200px;/* @kind spacing */
+}

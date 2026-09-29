@@ -1,0 +1,16 @@
+<!-- @dsCard group="Components" viewport="700x340" name="Feedback" subtitle="Dialog, Toast" -->
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{padding:24px}.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.col{display:flex;flex-direction:column;gap:16px}.lbl{font:var(--type-label);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--text-4);width:88px;flex:none}</style>
+</head><body><div id="root"></div><script type="text/babel">
+const NS=window.ELIVODesignSystem_a6632d;
+const {Dialog,Toast,Button,Checkbox}=NS;
+ReactDOM.createRoot(root).render(<div style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:20,alignItems:'start'}}>
+<Dialog inline width="100%" title="這 3 個決策對嗎？" description="確認後寫入 Decision Ledger" onClose={()=>{}} footer={<><Button variant="ghost" size="sm">稍後</Button><Button variant="primary" size="sm">寫入 Ledger</Button></>}>
+<div className="col" style={{gap:12}}><Checkbox defaultChecked label="採用方案 B，分階段切換"/><Checkbox defaultChecked label="Gateway 先切 20% 流量"/></div></Dialog>
+<div className="col" style={{gap:10}}><Toast tone="success" title="已寫入 Decision Ledger" body="3 個決策 · 5 個待辦"/><Toast tone="warn" title="網路中斷" body="逐字稿已在本地緩衝"/><Toast title="告知文字已貼到會議聊天室" onClose={()=>{}}/></div>
+</div>);
+</script></body></html>

@@ -1,0 +1,8 @@
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;background:var(--bg-ambient),var(--bg);background-attachment:fixed;color:var(--text-1);font:var(--type-body);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+a{color:var(--accent-text);text-decoration:none}
+a:hover{text-decoration:underline;text-underline-offset:3px}
+::selection{background:var(--accent-soft);color:var(--text-1)}
+@keyframes elivo-surface{from{opacity:0;transform:translateY(8px) scale(.98);filter:blur(4px)}to{opacity:1;transform:none;filter:none}}
+@keyframes elivo-pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes elivo-caret{0%,100%{opacity:1}50%{opacity:0}}

@@ -1,0 +1,23 @@
+<!-- @dsCard group="Components" viewport="700x420" name="Conversation" subtitle="ContextCard, AmbientItem, TranscriptLine, SourceChip, RecIndicator" -->
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<style>body{padding:24px}.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.col{display:flex;flex-direction:column;gap:16px}.lbl{font:var(--type-label);letter-spacing:var(--tracking-label);text-transform:uppercase;color:var(--text-4);width:88px;flex:none}</style>
+</head><body><div id="root"></div><script type="text/babel">
+const NS=window.ELIVODesignSystem_a6632d;
+const {ContextCard,AmbientItem,TranscriptLine,RecIndicator}=NS;
+ReactDOM.createRoot(root).render(<div style={{display:'grid',gridTemplateColumns:'1fr 300px',gap:24}}>
+<div className="col" style={{gap:0}}>
+<div className="row" style={{marginBottom:10}}><RecIndicator state="rec" time="00:23:41"/><RecIndicator state="ephemeral"/><RecIndicator state="paused"/></div>
+<TranscriptLine speaker="我" self time="00:22:58" text="我們上次討論的 API migration……"/>
+<TranscriptLine speaker="對方" time="00:23:05" text="對，當時最大的問題其實是 latency，p95 大概八百多"/>
+<TranscriptLine speaker="對方" time="00:23:12" text="所以這次我們想直接全部切過去" highlight="全部切過去" linked/>
+<TranscriptLine speaker="我" self partial text="那 rollback 的部分"/>
+</div>
+<div className="col" style={{gap:10}}>
+<ContextCard type="decision_conflict" level="promoted" time="00:23:14" title="與 8/12 決策不同" body="「全部切過去」與 8/12 決定的分階段方案 B 不同。" source={{label:'8/12 週會',time:'00:31:05'}} onOpenSource={()=>{}} onPin={()=>{}} onDismiss={()=>{}}/>
+<div><AmbientItem kind="doc" label="API Migration Proposal v2" meta="7/28" onClick={()=>{}}/><AmbientItem kind="number" label="Benchmark p95 820ms" meta="7/30"/><AmbientItem kind="question" label="未回答：rollback 誰負責？" meta="00:19"/></div>
+</div></div>);
+</script></body></html>

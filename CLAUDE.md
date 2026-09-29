@@ -13,6 +13,7 @@ ELIVO（意聯）是一個即時對談智慧產品：不用 bot 的 Mac app，�
 - `docs/04-mvp-spec.md`：MVP 的 user stories 與驗收標準。
 - `docs/adr/`：決策紀錄。有重大決策時新增一份 ADR。
 - `docs/research/`：研究附錄，附來源連結。
+- `design/`：設計系統（從 Claude Design 專案「ELIVO Design System」同步）。做任何 UI 前先讀 `design/readme.md`（品牌、文案、視覺規則）；tokens 在 `design/tokens/`，React 元件在 `design/components/`，Mac app 點擊原型在 `design/ui_kits/mac-app/`。
 
 ## 慣例
 - 所有文件使用繁體中文（台灣用語），技術名詞可保留英文。

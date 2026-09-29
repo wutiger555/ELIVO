@@ -19,3 +19,6 @@ node_modules/
 
 # systap 編譯產物
 spikes/asr-realtime/systap/systap
+
+# impeccable 設計檢查工具的快取
+.impeccable/hook.cache.json
