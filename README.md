@@ -32,7 +32,7 @@ ELIVO 在會議進行中，安靜地把「現在說的話」和「過去的決�
 | [`docs/06-compliance-and-trust.md`](docs/06-compliance-and-trust.md) | 合規與信任設計清單（台灣、美國、EU、日本） |
 | [`docs/07-risk-register.md`](docs/07-risk-register.md) | 風險登記表 |
 | [`docs/adr/`](docs/adr/) | 架構與產品決策紀錄 |
-| [`docs/research/`](docs/research/) | 研究附錄（英文原文，含來源連結） |
+| [`docs/research/`](docs/research/) | 研究附錄（競品與市場、技術可行性、法規與 GTM，含來源連結） |
 
 ## 核心判斷（摘自調查報告）
 

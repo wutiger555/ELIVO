@@ -1,23 +1,23 @@
 # CLAUDE.md
 
-ELIVO（意聯）is a real-time conversation intelligence product. It is a bot-free Mac app, later paired with a companion desk display. During a meeting it links what is being said to past decisions, numbers and documents, and shows short cards, each citing its source, only when they matter.
+ELIVO（意聯）是一個即時對談智慧產品：不用 bot 的 Mac app，之後搭配桌上型伴隨顯示器。它在會議中把當下說的話，與過去的決策、數字、文件連結起來；只在重要時才顯示簡短卡片，每張都附上來源。
 
-The project is in Phase 0 (validation). The repo contains planning docs only, with no code yet.
+專案目前在 Phase 0（驗證期）：repo 裡只有規劃文件，還沒有程式碼。
 
-## Where things are
-- `docs/01-research-report.md`: the full investigation and verdict. Read it before changing product direction.
-- `docs/02-project-plan.md`: the revised plan, roadmap and gates.
-- `docs/03-technical-architecture.md`: architecture, data model and surfacing policy.
-- `docs/04-mvp-spec.md`: MVP user stories and acceptance criteria.
-- `docs/adr/`: decision records. Add a new ADR for any significant decision.
-- `docs/research/`: English research appendices with sources.
+## 文件位置
+- `docs/01-research-report.md`：全盤調查與最終判斷。要改變產品方向前先讀這份。
+- `docs/02-project-plan.md`：修訂版計劃、路線圖與關卡。
+- `docs/03-technical-architecture.md`：架構、資料模型、surfacing policy。
+- `docs/04-mvp-spec.md`：MVP 的 user stories 與驗收標準。
+- `docs/adr/`：決策紀錄。有重大決策時新增一份 ADR。
+- `docs/research/`：研究附錄，附來源連結。
 
-## Conventions
-- Write docs in Traditional Chinese (zh-TW), keeping technical terms in English.
-- Hard product constraints (see ADR-0003):
-  - Never train on customer data.
-  - No emotion recognition.
-  - No persistent voiceprints by default.
-  - No meeting bots in Phase 1.
-  - Never market the product as "invisible" or "undetectable".
-- Keep AI vendors behind abstraction layers (ADR-0002).
+## 慣例
+- 所有文件使用繁體中文（台灣用語），技術名詞可保留英文。
+- 產品硬性限制（見 ADR-0003）：
+  - 不用客戶資料訓練模型。
+  - 不做情緒辨識。
+  - 預設不建立持久聲紋。
+  - Phase 1 不做會議 bot。
+  - 不以「隱形」、「不被發現」作為行銷訴求。
+- AI 供應商一律放在抽象層後面（ADR-0002）。
