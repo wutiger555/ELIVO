@@ -23,6 +23,15 @@
         ],
         "createdAt": "2026-09-29T09:49:15.340Z",
         "reason": "generated gallery thumbnail from Claude Design (full-bleed wordmark + swatches), verbatim mirror"
+      },
+      {
+        "rule": "pulsing-dot",
+        "value": "*",
+        "files": [
+          "spikes/asr-realtime/static/index.html"
+        ],
+        "createdAt": "2026-09-29T17:30:41.419Z",
+        "reason": "design/readme.md Motion 規範「Pulse only for live dots」；REC 指示燈與正在說話者的點對應真實的即時擷取狀態"
       }
     ]
   }
