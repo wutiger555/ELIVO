@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ELIVO 即時逐字稿</title>
+<style>
+  :root {
+    --bg: #fafaf8;
+    --panel: #ffffff;
+    --line: #e6e4df;
+    --ink: #161616;
+    --tentative: #9a9892;
+    --muted: #6d6b66;
+    --me: #2f5d8a;
+    --other: #7a4f2a;
+    --ok: #3c8a4f;
+    --bad: #b5452f;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.6 -apple-system, "PingFang TC", "Noto Sans TC", "Helvetica Neue", sans-serif;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 20px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: .02em; }
+  header .meta { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); margin-right: 6px; vertical-align: 1px; }
+  .dot.on { background: var(--ok); }
+  main {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
+  section { min-height: 0; display: flex; flex-direction: column; }
+  section + section { border-left: 1px solid var(--line); }
+  section h2 {
+    margin: 0;
+    padding: 10px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: .08em;
+  }
+  .scroll { flex: 1; overflow-y: auto; padding: 4px 20px 40px; }
+  .utt { display: flex; gap: 12px; padding: 8px 0; font-size: 20px; line-height: 1.55; }
+  .who {
+    flex: none;
+    min-width: 2.6em;
+    margin-top: 5px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 22px;
+    text-align: center;
+    color: #fff;
+    background: var(--me);
+  }
+  .who.other { background: var(--other); }
+  .text { min-width: 0; overflow-wrap: anywhere; }
+  .committed { color: var(--ink); }
+  .tentative { color: var(--tentative); }
+  .empty { color: var(--muted); font-size: 15px; padding: 16px 0; }
+  .card { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 10px 14px; margin: 10px 0; }
+  .card .kind { font-size: 12px; color: var(--muted); letter-spacing: .06em; }
+  .card .body { font-size: 16px; }
+  .card .src { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; grid-template-rows: minmax(0, 3fr) minmax(0, 2fr); }
+    section + section { border-left: 0; border-top: 1px solid var(--line); }
+    .utt { font-size: 18px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1><span id="dot" class="dot"></span>ELIVO 即時逐字稿</h1>
+  <span class="meta" id="model">–</span>
+  <span class="meta" id="stats">首字 – ／ 定稿 – ／ 推論 –</span>
+</header>
+<main>
+  <section>
+    <h2>逐字稿（灰字＝暫定，黑字＝確定）</h2>
+    <div class="scroll" id="transcript"><div class="empty" id="empty">等待說話…</div></div>
+  </section>
+  <section>
+    <h2>CONTEXT</h2>
+    <div class="scroll" id="cards"><div class="empty">決策、待辦、未回答問題與數字卡片會出現在這裡（Step D）。</div></div>
+  </section>
+</main>
+<script>
+const transcript = document.getElementById("transcript");
+const cards = document.getElementById("cards");
+const lines = new Map();
+const fmt = (v) => (v == null ? "–" : v.toFixed(1) + "s");
+
+function nearBottom(el) {
+  return el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+}
+
+function renderUtt(ev) {
+  const stick = nearBottom(transcript);
+  let row = lines.get(ev.id);
+  if (ev.final && !ev.committed) {
+    if (row) { row.remove(); lines.delete(ev.id); }
+    return;
+  }
+  if (!row) {
+    document.getElementById("empty")?.remove();
+    row = document.createElement("div");
+    row.className = "utt";
+    const who = document.createElement("span");
+    who.className = "who" + (ev.speaker === "我" ? "" : " other");
+    who.textContent = ev.speaker;
+    const text = document.createElement("div");
+    text.className = "text";
+    text.innerHTML = '<span class="committed"></span><span class="tentative"></span>';
+    row.append(who, text);
+    transcript.append(row);
+    lines.set(ev.id, row);
+  }
+  row.querySelector(".committed").textContent = ev.committed;
+  row.querySelector(".tentative").textContent = ev.tentative;
+  if (stick) transcript.scrollTop = transcript.scrollHeight;
+}
+
+function renderStats(s) {
+  if (!s) return;
+  document.getElementById("stats").textContent =
+    `首字 p50 ${fmt(s.first_p50)} ／ 定稿 p50 ${fmt(s.final_p50)} ／ 推論 p50 ${fmt(s.infer_p50)} ／ ${s.utterances} 句`;
+}
+
+function renderCards(list) {
+  cards.replaceChildren();
+  for (const c of list) {
+    const el = document.createElement("div");
+    el.className = "card";
+    el.innerHTML = '<div class="kind"></div><div class="body"></div><div class="src"></div>';
+    el.querySelector(".kind").textContent = c.kind;
+    el.querySelector(".body").textContent = c.text;
+    el.querySelector(".src").textContent = c.source || "";
+    cards.append(el);
+  }
+}
+
+function connect() {
+  const ws = new WebSocket(`ws://${location.host}/ws`);
+  const dot = document.getElementById("dot");
+  ws.onopen = () => dot.classList.add("on");
+  ws.onclose = () => { dot.classList.remove("on"); setTimeout(connect, 1000); };
+  ws.onmessage = (msg) => {
+    const ev = JSON.parse(msg.data);
+    if (ev.type === "snapshot") {
+      lines.forEach((row) => row.remove());
+      lines.clear();
+      ev.utts.forEach(renderUtt);
+      document.getElementById("model").textContent = `${ev.status.model} · ${ev.status.source}`;
+      renderStats(ev.status.stats);
+      if (ev.status.cards) renderCards(ev.status.cards);
+    } else if (ev.type === "utt") renderUtt(ev);
+    else if (ev.type === "stats") renderStats(ev.stats);
+    else if (ev.type === "cards") renderCards(ev.cards);
+  };
+}
+connect();
+</script>
+</body>
+</html>

@@ -2,8 +2,12 @@
 
 離線基準與即時 demo 走同一條路徑，量到的延遲才可比較。
 """
+import atexit
 import io
+import signal
+import socket
 import subprocess
+import sys
 import time
 from dataclasses import dataclass, field
 
@@ -43,13 +47,20 @@ class WhisperServer:
             # verbose_json 預設會另算語言機率，等於多跑一次 encoder，延遲幾乎翻倍
             "--no-language-probabilities",
         ]
+        # 埠已被占用時，健康檢查會連到別人的 server（例如上次殘留的其他模型），量到的數字就錯了
+        with socket.socket() as s:
+            if s.connect_ex(("127.0.0.1", self.port)) == 0:
+                raise RuntimeError(f"port {self.port} 已被占用，請先結束殘留的 whisper-server（pkill whisper-server）")
+        # 被 SIGTERM（kill、pkill）結束時也要收掉子行程，否則會殘留並占住 port
+        signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
+        atexit.register(self.stop)
         t0 = time.perf_counter()
         self.proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT)
         while time.perf_counter() - t0 < timeout:
             if self.proc.poll() is not None:
                 raise RuntimeError(f"whisper-server 啟動失敗，見 {log.name}")
             try:
-                if self.client.get(self.url + "/").status_code == 200:
+                if self.client.get(self.url + "/").status_code == 200 and self.proc.poll() is None:
                     return time.perf_counter() - t0
             except httpx.TransportError:
                 pass
@@ -86,7 +97,7 @@ class WhisperServer:
             {"start": s["start"], "end": s["end"], "text": to_tw(s["text"]).strip()}
             for s in body.get("segments", [])
         ]
-        text = "".join(_join(segments))
+        text = join_segments(segments)
         return Result(text=text, segments=segments, elapsed=elapsed)
 
     def __enter__(self):
@@ -97,12 +108,12 @@ class WhisperServer:
         self.stop()
 
 
-def _join(segments):
+def join_segments(segments) -> str:
     """段落之間：兩側都是英數才補空白。"""
-    prev = ""
+    out = ""
     for s in segments:
         t = s["text"]
-        if prev and t and prev[-1].isascii() and prev[-1].isalnum() and t[0].isascii() and t[0].isalnum():
-            yield " "
-        yield t
-        prev = t or prev
+        if out and t and out[-1].isascii() and out[-1].isalnum() and t[0].isascii() and t[0].isalnum():
+            out += " "
+        out += t
+    return out

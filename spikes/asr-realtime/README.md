@@ -57,3 +57,23 @@ cd spikes/asr-realtime
 - whisper-server 的 CPU 與 RSS，以及 CPU／GPU 溫度與功耗（macmon）。
 
 跑之前請關掉其他吃資源的程式；Box／OneDrive 同步（`fileproviderd`）也會影響數字。
+
+## Step B：即時麥克風 demo
+
+```bash
+~/.venvs/elivo-asr/bin/python stream_demo.py --list-devices          # 查裝置編號
+~/.venvs/elivo-asr/bin/python stream_demo.py                         # 預設麥克風、Breeze q8
+~/.venvs/elivo-asr/bin/python stream_demo.py --model turbo --mic-device 0
+~/.venvs/elivo-asr/bin/python stream_demo.py --replay ~/ELIVO-data/eval/datasets/meeting01.m4a --once   # 用錄音重播，量延遲
+```
+
+- 開 `http://localhost:8765`；同一個 Wi-Fi 的 iPad 開終端機印出的 `http://<區網 IP>:8765`。
+  - 第一次會跳出 macOS 防火牆「允許傳入連線」，要按允許 iPad 才連得到。
+  - 第一次用麥克風要允許終端機存取麥克風（系統設定 › 隱私權與安全性 › 麥克風）。
+- 灰字＝暫定字，黑字＝確定字；右欄預留給 Step D 卡片。
+- 流程：麥克風 → Silero VAD（切語句）→ 每 0.5 秒把整句重送 ASR → LocalAgreement-2（連續兩次一致才確定）→ 靜音 0.6 秒後整句重跑一次定稿。
+- 每次執行的延遲紀錄寫在 `~/ELIVO-data/runs/stream-*.jsonl`：
+  - 首字延遲：開口 → 第一次出現文字
+  - 定稿延遲：停止說話 → 整句定稿
+  - 每次推論時間
+- 可調參數：`--step`、`--min-silence`、`--max-utt`、`--prompt`（術語）。
