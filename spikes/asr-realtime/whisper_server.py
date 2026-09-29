@@ -19,11 +19,23 @@ from config import RUNS_DIR, SAMPLE_RATE, model_path
 from textnorm import to_tw
 
 
+# 雜音幻覺過濾（遠離麥克風時常見）：Whisper 自評信心太低、或「不是語音」機率高且信心偏低的 segment 丟掉。
+# 不用音量門檻當主要條件：實測原音縮到 3% 音量仍能正確辨識，硬性音量門檻會誤刪真的講話。
+LOGPROB_MIN = -1.0
+NO_SPEECH_MAX, NO_SPEECH_LOGPROB = 0.5, -0.5
+
+
+def is_hallucination(seg: dict) -> bool:
+    lp, ns = seg.get("avg_logprob", 0.0), seg.get("no_speech_prob", 0.0)
+    return lp < LOGPROB_MIN or (ns > NO_SPEECH_MAX and lp < NO_SPEECH_LOGPROB)
+
+
 @dataclass
 class Result:
     text: str
-    segments: list = field(default_factory=list)  # [{"start": s, "end": s, "text": str}]
+    segments: list = field(default_factory=list)  # [{"start", "end", "text", "avg_logprob", "no_speech_prob"}]
     elapsed: float = 0.0
+    dropped: list = field(default_factory=list)   # 被判定為雜音幻覺的 segment
 
 
 class WhisperServer:
@@ -93,12 +105,12 @@ class WhisperServer:
         elapsed = time.perf_counter() - t0
         r.raise_for_status()
         body = r.json()
-        segments = [
-            {"start": s["start"], "end": s["end"], "text": to_tw(s["text"]).strip()}
-            for s in body.get("segments", [])
-        ]
-        text = join_segments(segments)
-        return Result(text=text, segments=segments, elapsed=elapsed)
+        segments, dropped = [], []
+        for s in body.get("segments", []):
+            seg = {"start": s["start"], "end": s["end"], "text": to_tw(s["text"]).strip(),
+                   "avg_logprob": s.get("avg_logprob", 0.0), "no_speech_prob": s.get("no_speech_prob", 0.0)}
+            (dropped if is_hallucination(seg) else segments).append(seg)
+        return Result(text=join_segments(segments), segments=segments, elapsed=elapsed, dropped=dropped)
 
     def __enter__(self):
         self.start()

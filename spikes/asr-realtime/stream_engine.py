@@ -21,6 +21,7 @@ from vad import CHUNK, SileroVAD
 from whisper_server import WhisperServer, join_segments
 
 CHUNK_S = CHUNK / SAMPLE_RATE
+MIN_RMS = 0.0015  # 整句能量低於這個值視為近乎靜音（遠距離講話約 0.005，仍會保留）
 # Whisper 在靜音或噪音時常見的幻覺字串
 HALLUCINATION = re.compile(r"謝謝(大家)?(收看|觀看|觀賞)|請不吝點贊|訂閱|字幕(由|提供|志願者)|Amara|優優獨播|明鏡與點點|李宗盛")
 
@@ -165,14 +166,17 @@ class StreamEngine:
 
     async def _finalize(self, u: Utterance):
         pcm = u.pcm()
+        rms = float(np.sqrt(np.mean(pcm ** 2)))
         res = await self._transcribe(pcm, final=True)
-        text = clean(res.text)
+        text = clean(res.text) if rms >= MIN_RMS else ""
         final_latency = time.monotonic() - u.speech_end
         u.committed, u.tentative = [text] if text else [], []
         self._emit(u, final=True)
         self.on_record({"type": "utt", "id": u.id, "speaker": self.speaker, "cut": False,
                         "duration_s": len(pcm) / SAMPLE_RATE, "first_latency_s": self._first_latency(u),
-                        "final_latency_s": final_latency, "n_infer": u.n_infer + 1, "text": text})
+                        "final_latency_s": final_latency, "n_infer": u.n_infer + 1, "text": text, "rms": rms,
+                        "dropped": [d["text"] for d in res.dropped],
+                        "min_logprob": min((sg["avg_logprob"] for sg in res.segments), default=None)})
 
     @staticmethod
     def _first_latency(u: Utterance):

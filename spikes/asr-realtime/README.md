@@ -70,13 +70,19 @@ cd spikes/asr-realtime
 - 開 `http://localhost:8765`；同一個 Wi-Fi 的 iPad 開終端機印出的 `http://<區網 IP>:8765`。
   - 第一次會跳出 macOS 防火牆「允許傳入連線」，要按允許 iPad 才連得到。
   - 第一次用麥克風要允許終端機存取麥克風（系統設定 › 隱私權與安全性 › 麥克風）。
-- 灰字＝暫定字，黑字＝確定字；右欄預留給 Step D 卡片。
+- 介面套用 `design/` 的 ELIVO 設計系統（深色液態玻璃、Ion 強調色、Geist＋Noto Sans TC），由 demo server 直接提供 `/design/*`。
+  - 正在說的那一句放大（30px），定稿後縮回歷史大小（18px）；新確認的字逐字浮現，暫定字為灰色，行尾 Ion 游標表示還在聽。
+  - 右欄依類型分組（決策／待辦／未回答問題／數字），新出現的項目短暫發光；每項附原文出處。
+  - 系統開啟「減少動態效果」時自動關閉動畫。
 - 流程：麥克風 → Silero VAD（切語句）→ 每 0.5 秒把整句重送 ASR → LocalAgreement-2（連續兩次一致才確定）→ 靜音 0.6 秒後整句重跑一次定稿。
 - 每次執行的延遲紀錄寫在 `~/ELIVO-data/runs/stream-*.jsonl`：
   - 首字延遲：開口 → 第一次出現文字
   - 定稿延遲：停止說話 → 整句定稿
   - 每次推論時間
 - 可調參數：`--step`、`--min-silence`、`--max-utt`、`--prompt`（術語）。
+- 雜音幻覺過濾：Whisper 自評信心 `avg_logprob < -1.0`，或 `no_speech_prob > 0.5` 且信心 `< -0.5` 的 segment 丟掉；整句能量低於 0.0015 也丟掉。
+  - 不用音量當主要條件：原音縮到 3% 仍能正確辨識。
+  - 被丟掉的文字記在 `stream-*.jsonl` 的 `dropped`，方便調門檻。
 
 ## Step C：系統音訊（Core Audio process tap）
 

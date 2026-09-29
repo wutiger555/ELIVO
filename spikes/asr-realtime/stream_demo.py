@@ -40,6 +40,8 @@ from vad import CHUNK
 from whisper_server import WhisperServer
 
 PAGE = Path(__file__).parent / "static" / "index.html"
+DESIGN = (Path(__file__).parent / "../../design").resolve()  # ELIVO 設計系統（tokens、字體設定）
+MIME = {".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml"}
 SYSTAP = Path(__file__).parent / "systap" / "systap"
 
 
@@ -50,9 +52,13 @@ class Hub:
         self.clients = set()
         self.utts: dict[str, dict] = {}
         self.status = status
+        self.started = time.monotonic()
 
     def emit(self, ev: dict):
         if ev["type"] == "utt":
+            # 會議內時間碼：這句第一次出現的時間，之後更新沿用
+            prev = self.utts.get(ev["id"])
+            ev["t"] = prev["t"] if prev else round(time.monotonic() - self.started, 1)
             if ev["final"] and not ev["committed"]:
                 self.utts.pop(ev["id"], None)  # 定稿後是空的（雜訊或幻覺）→ 移除
             else:
@@ -66,7 +72,8 @@ class Hub:
     async def handler(self, ws):
         self.clients.add(ws)
         try:
-            await ws.send(json.dumps({"type": "snapshot", "utts": list(self.utts.values()), "status": self.status}, ensure_ascii=False))
+            status = {**self.status, "elapsed": time.monotonic() - self.started}
+            await ws.send(json.dumps({"type": "snapshot", "utts": list(self.utts.values()), "status": status}, ensure_ascii=False))
             async for _ in ws:
                 pass
         except ConnectionClosed:
@@ -82,6 +89,12 @@ def process_request(connection, request):
         body = PAGE.read_bytes()
         headers = Headers([("Content-Type", "text/html; charset=utf-8"), ("Content-Length", str(len(body))), ("Cache-Control", "no-store")])
         return Response(HTTPStatus.OK, "OK", headers, body)
+    if request.path.startswith("/design/"):
+        f = (DESIGN / request.path.removeprefix("/design/")).resolve()
+        if f.is_relative_to(DESIGN) and f.is_file() and f.suffix in MIME:
+            body = f.read_bytes()
+            headers = Headers([("Content-Type", MIME[f.suffix]), ("Content-Length", str(len(body)))])
+            return Response(HTTPStatus.OK, "OK", headers, body)
     return connection.respond(HTTPStatus.NOT_FOUND, "not found\n")
 
 
@@ -191,7 +204,10 @@ async def main(args):
     replaying = any(c[2] for c in channels)
     source = " + ".join(f"{who}:{Path(f).name if f else (dev if dev is not None else '預設麥克風')}" for who, dev, f in channels)
 
-    hub = Hub({"model": args.model, "source": source})
+    status = {"model": args.model, "source": source}
+    if args.cards:
+        status["cards_model"] = args.cards_model or "claude-haiku-4-5"
+    hub = Hub(status)
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
     log_path = RUNS_DIR / datetime.now().strftime(f"stream-%Y%m%d-%H%M%S-{args.model}.jsonl")
     stats = Stats(hub, log_path)
