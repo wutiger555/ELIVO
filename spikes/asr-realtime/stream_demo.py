@@ -11,6 +11,8 @@ Step C：--system-device 再開一路系統音訊，標為「他人」；兩路�
   python stream_demo.py --mic-device 2 --model turbo
   python stream_demo.py --replay ~/ELIVO-data/eval/datasets/meeting01.m4a --once
   python stream_demo.py --system-device systap               # 麥克風＝我、系統音訊＝他人
+  python stream_demo.py --cards                              # Step D：右欄顯示 Claude Haiku 4.5 抽出的卡片
+  python stream_demo.py --cards --cards-provider ica --cards-model <id>   # 改用 IBM Consulting Advantage
 """
 import argparse
 import asyncio
@@ -30,6 +32,7 @@ from websockets.datastructures import Headers
 from websockets.http11 import Response
 
 from bench_offline import load_audio
+from cards import CardExtractor, llm_cost
 from config import RUNS_DIR, SAMPLE_RATE
 from stream_engine import StreamEngine
 from vad import CHUNK
@@ -55,6 +58,8 @@ class Hub:
                 self.utts[ev["id"]] = ev
         elif ev["type"] == "stats":
             self.status["stats"] = ev["stats"]
+        elif ev["type"] == "cards":
+            self.status["cards"] = ev["cards"]
         broadcast(self.clients, json.dumps(ev, ensure_ascii=False))
 
     async def handler(self, ws):
@@ -82,7 +87,7 @@ class Stats:
 
     def __init__(self, hub: Hub, path: Path):
         self.hub, self.file = hub, path.open("w")
-        self.first, self.final, self.infer = [], [], []
+        self.first, self.final, self.infer, self.llm = [], [], [], []
 
     def record(self, rec: dict):
         rec["ts"] = time.time()
@@ -90,6 +95,9 @@ class Stats:
         self.file.flush()
         if rec["type"] == "infer":
             self.infer.append(rec["elapsed_s"])
+            return
+        if rec["type"] == "llm":
+            self.llm.append(rec)
             return
         if rec.get("first_latency_s") is not None:
             self.first.append(rec["first_latency_s"])
@@ -104,6 +112,8 @@ class Stats:
             "first_p50": p(self.first, 50), "first_p95": p(self.first, 95),
             "final_p50": p(self.final, 50), "final_p95": p(self.final, 95),
             "infer_p50": p(self.infer, 50), "infer_p95": p(self.infer, 95),
+            **({"llm_calls": len(self.llm), "llm_p50": p([r["elapsed_s"] for r in self.llm], 50),
+                "llm_cost_usd": None if (c := llm_cost(self.llm)) is None else round(c, 4)} if self.llm else {}),
         }
 
 
@@ -183,6 +193,17 @@ async def main(args):
     log_path = RUNS_DIR / datetime.now().strftime(f"stream-%Y%m%d-%H%M%S-{args.model}.jsonl")
     stats = Stats(hub, log_path)
 
+    emit = hub.emit
+    cards = None
+    if args.cards:
+        cards = CardExtractor(hub.emit, stats.record, provider=args.cards_provider, model=args.cards_model,
+                              interval=args.cards_interval)
+
+        def emit(ev):
+            hub.emit(ev)
+            if ev["type"] == "utt" and ev["final"] and ev["committed"]:
+                cards.add_final(ev)
+
     lock = asyncio.Lock()  # 兩路共用一個 whisper-server，推論依序排隊
     loop = asyncio.get_running_loop()
     streams, jobs = [], []
@@ -191,7 +212,7 @@ async def main(args):
             print(f"開啟：http://localhost:{args.port}  （iPad：http://{lan_ip()}:{args.port}）", flush=True)
             for who, device, replay_file in channels:
                 queue: asyncio.Queue = asyncio.Queue()
-                engine = StreamEngine(asr, lock, who, hub.emit, step=args.step, min_silence=args.min_silence,
+                engine = StreamEngine(asr, lock, who, emit, step=args.step, min_silence=args.min_silence,
                                       max_utt=args.max_utt, prompt=args.prompt, on_record=stats.record)
                 jobs.append(engine.run(queue))
                 if replay_file:
@@ -201,7 +222,13 @@ async def main(args):
                 else:
                     streams.append(start_input(loop, queue, device))
             print(f"收音中（{source}）；Ctrl-C 離開", flush=True)
+            card_task = asyncio.create_task(cards.run()) if cards else None
             await asyncio.gather(*jobs)
+            if cards:
+                card_task.cancel()
+                await cards.extract()  # 重播結束：把最後幾句也抽進卡片
+                for c in hub.status.get("cards", []):
+                    print(f"  [{c['kind']}] {c['text']}  {c['source']}")
             if replaying and not args.once:
                 print(json.dumps(stats.summary(), ensure_ascii=False))
                 print("重播結束，網頁保持開啟；Ctrl-C 離開", flush=True)
@@ -230,6 +257,10 @@ if __name__ == "__main__":
     ap.add_argument("--min-silence", type=float, default=0.6, help="靜音幾秒視為句尾")
     ap.add_argument("--max-utt", type=float, default=15.0, help="單句最長秒數，超過就切")
     ap.add_argument("--prompt", help="initial prompt，例如術語表")
+    ap.add_argument("--cards", action="store_true", help="Step D：用 LLM 抽出決策／待辦／未回答問題／數字")
+    ap.add_argument("--cards-provider", choices=["anthropic", "ica"], default="anthropic")
+    ap.add_argument("--cards-model", help="模型 id；anthropic 預設 claude-haiku-4-5，ica 必填")
+    ap.add_argument("--cards-interval", type=float, default=18.0, help="每幾秒抽一次卡片（有新句子才呼叫）")
     ap.add_argument("--list-devices", action="store_true")
     args = ap.parse_args()
     if args.list_devices:

@@ -94,3 +94,24 @@ systap/build.sh                                                      # 需要 Xc
 - 兩路共用一個 whisper-server，同時說話時推論要排隊，延遲會變長。
 - 也可以給一般輸入裝置，例如 `--system-device "BlackHole 2ch"`。
 - 測試用：`--replay-system <音檔>` 以音檔代替系統音訊。
+
+## Step D：卡片雛形（LLM 抽取）
+
+```bash
+# 目前使用 IBM Consulting Advantage（ICA），金鑰存在鑰匙圈的 elivo-ica-api-key
+security add-generic-password -a "$USER" -s elivo-ica-api-key -w      # 只要做一次
+~/.venvs/elivo-asr/bin/python cards.py --list-ica-models              # 列出可用模型
+~/.venvs/elivo-asr/bin/python stream_demo.py --cards --cards-provider ica --cards-model claude-haiku-4-5 --system-device systap
+```
+
+- 供應商放在 Provider 介面後面（ADR-0002），用 `--cards-provider` 切換：
+  - `ica`：IBM Consulting Advantage，OpenAI 相容的 `/chat-models/chat/completions`，Bearer 驗證。
+    - 沒有 structured outputs：JSON schema 寫在 prompt 裡，回覆用 Pydantic 驗證，不合格就丟棄這一輪。
+    - 可用模型含 `claude-haiku-4-5`（經 AWS Bedrock）、GPT、Gemini、Granite 等。
+  - `anthropic`：直接呼叫 Anthropic API（structured outputs），金鑰在鑰匙圈的 `elivo-anthropic-api-key`；需要組織的 Claude Console 有額度。
+- 每 18 秒（`--cards-interval`），**有新定稿句子才呼叫**。每次送「上一次的抽取結果＋最近 150 句逐字稿」，模型延續並修正。
+- 抽出：決策、待辦（負責人、期限）、未回答問題、數字。每一項附逐字稿原文與句子 id。
+- 依 ADR-0003：prompt 明確禁止判斷情緒、態度或參與度。
+- 金鑰不要 export 在 `.zshrc`（`ANTHROPIC_API_KEY` 會讓 Claude Code 也改用那把金鑰計費）。
+- 逐字稿會送到雲端 LLM：錄音同意書要涵蓋「逐字稿送雲端 AI 摘要」。
+- 延遲與 token 數寫在 `stream-*.jsonl`（`type: llm`）。

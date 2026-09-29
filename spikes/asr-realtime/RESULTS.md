@@ -73,8 +73,28 @@ Breeze 把「kickoff」辨識成「kick off」，因此術語召回為 80%。
 - 終端機以外的啟動方式（例如之後的 Tauri app）要各自取得「系統錄音」權限。
 - 麥克風回音：用喇叭時會重複轉寫，正式版需要 AEC。這台機器目前以耳機測試為前提。
 
-## 7. 待辦
+## 7. Step D：卡片雛形
+
+- 供應商：IBM Consulting Advantage，模型 `claude-haiku-4-5`（經 AWS Bedrock）。原本規劃的 Anthropic API 因組織帳戶沒有額度而改用 ICA；兩者都保留在 Provider 介面後面。
+- ICA 沒有 structured outputs：schema 寫在 prompt，回覆用 Pydantic 驗證。這次 3 次呼叫都回傳合格 JSON。
+- 合成會議（52 秒、7 句）重播，每 15 秒抽一次：
+
+| 呼叫 | 當時句數 | 延遲 | input／output tokens |
+|---|---|---|---|
+| 1 | 1 | 3.18 s | 1,349／39 |
+| 2 | 4 | 4.21 s | 1,473／471 |
+| 3 | 7 | 4.95 s | 1,902／822 |
+
+- 延遲 3–5 秒，對 15–20 秒一次的節奏夠用，但離架構文件「卡片 P50 < 4 秒」還差一點；之後可比較 ICA 上較快的模型（例如 Gemini Flash、GPT-5.6 Luna）。
+- **品質問題（下一步要調 prompt，並在真實會議上量 decision／action F1，即 S3 spike）**：
+  - 把沒有關聯的內容硬連起來：「deadline 定在 10 月 15 號」被標成「SSO 上線的 deadline」。
+  - 把 ASR 錯字腦補成別的詞：「roads out 的 Alice」（其實是 root cause analysis）被寫成「roadmap」。
+  - 「客戶問 SSO 什麼時候上線，我們還沒有答案」應該是**未回答問題**，卻被當成決策。
+  - 句子來源（utt_id 與原文）都有附上，可以追溯。
+
+## 8. 待辦
 
 - [ ] 真實中英混說會議錄音（取得同意，3–10 分鐘 × 1–3 段）＋ gold 逐字稿 → Step A 正式數字
 - [ ] Step B：真人麥克風實測、iPad 同 Wi-Fi 開啟驗證
 - [ ] Step C：實際 Zoom／Meet／Teams 會議中擷取（需要你開一場測試會議）
+- [ ] Step D：調整抽取 prompt，減少過度連結與腦補；比較 ICA 上其他模型的延遲與品質
