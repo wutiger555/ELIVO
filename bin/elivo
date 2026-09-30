@@ -65,7 +65,7 @@ status() {
   if ready; then
     local lan; lan="$(curl -sf "$URL/api/status" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["lan_url"])')"
     echo "  這台 Mac：$URL"
-    echo "  iPad／手機：在會議畫面按 QR code 圖示掃描（同一個 Wi-Fi，$lan）"
+    echo "  iPad／手機：在會議畫面按 QR code 圖示掃描（同一個 Wi-Fi，${lan}）"
     echo "  記錄：$LOG"
   else
     echo "ELIVO 沒有在跑"
