@@ -34,7 +34,7 @@ ELIVO 在會議進行中，安靜地把「現在說的話」和「過去的決�
 | [`docs/08-handoff-local-dev.md`](docs/08-handoff-local-dev.md) | 本地 Mac 即時 ASR spike 的交接（硬體判斷、任務、產出） |
 | [`docs/09-distribution-and-business-model.md`](docs/09-distribution-and-business-model.md) | **產品發佈與商業模式**：競品做法、模型發佈、LLM 閘道取代自備金鑰、訂閱定價、LLM 成本問題與架構調整 |
 | [`docs/adr/`](docs/adr/) | 架構與產品決策紀錄 |
-| [`docs/research/`](docs/research/) | 研究附錄（競品與市場、技術可行性、法規與 GTM，含來源連結） |
+| [`docs/research/`](docs/research/) | 研究附錄（競品與市場、技術可行性、法規與 GTM、說話者分辨，含來源連結） |
 
 ## 核心判斷（摘自調查報告）
 
