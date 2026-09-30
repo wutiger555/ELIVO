@@ -1,13 +1,14 @@
 // 訂閱一場會議的即時事件（本機控制端 /ws/meetings/:id，第二螢幕 /ws/view?token=）。
 // 斷線會自動重連；重連後伺服器會先送完整快照，所以關掉分頁再打開也接得回來。
 import { useEffect, useReducer } from "react";
-import { wsUrl, type Meeting, type Minutes, type Snapshot, type Stats, type Utt } from "./api";
+import { wsUrl, type Hint, type Meeting, type Minutes, type Snapshot, type Stats, type Utt } from "./api";
 
 export interface MeetingState {
   meeting: Meeting | null;
   utts: Utt[];
   minutes: Minutes | null;
   stats: Stats | null;
+  hints: Hint[];
   pauses: Snapshot["pauses"];
   clockBase: number;   // 伺服器回報的會議時間（秒）
   clockAt: number;     // 收到時的本機時間（performance.now）
@@ -23,7 +24,7 @@ type Action =
   | { type: "event"; ev: any };
 
 const initial: MeetingState = {
-  meeting: null, utts: [], minutes: null, stats: null, pauses: [], clockBase: 0, clockAt: 0, running: false,
+  meeting: null, utts: [], minutes: null, stats: null, hints: [], pauses: [], clockBase: 0, clockAt: 0, running: false,
   levels: {}, connected: false, denied: false,
 };
 
@@ -34,7 +35,7 @@ function reduce(s: MeetingState, a: Action): MeetingState {
   switch (ev.type) {
     case "snapshot":
       return {
-        ...s, meeting: ev.meeting, utts: ev.utts, minutes: ev.minutes, stats: ev.stats, pauses: ev.pauses,
+        ...s, meeting: ev.meeting, utts: ev.utts, minutes: ev.minutes, stats: ev.stats, hints: ev.hints ?? [], pauses: ev.pauses,
         clockBase: ev.clock, clockAt: performance.now(), running: ev.running,
       };
     case "meeting":
@@ -46,7 +47,9 @@ function reduce(s: MeetingState, a: Action): MeetingState {
       return { ...s, utts };
     }
     case "utt_deleted":
-      return { ...s, utts: s.utts.filter((u) => u.id !== ev.id) };
+      return { ...s, utts: s.utts.filter((u) => u.id !== ev.id), hints: s.hints.filter((h) => h.trigger !== ev.id && h.jump !== ev.id) };
+    case "hint":
+      return { ...s, hints: [...s.hints, ev.hint] };
     case "minutes":
       return { ...s, minutes: ev.minutes };
     case "stats":

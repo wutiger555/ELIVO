@@ -37,6 +37,7 @@ export function NewMeeting({ query }: { query: URLSearchParams }) {
   const [sys, setSys] = useState({ on: false });
   const [mode, setMode] = useState<"standard" | "ephemeral">("standard");
   const [keepAudio, setKeepAudio] = useState(false);
+  const [aiPolicy, setAiPolicy] = useState<"economy" | "quality">("economy");
   const [glossary, setGlossary] = useState<string | null>(null);   // null＝沿用 Space 的術語表
   const [brief, setBrief] = useState<{ meeting: { title: string; started_at: number } | null; items: Item[] } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -82,7 +83,8 @@ export function NewMeeting({ query }: { query: URLSearchParams }) {
     setError("");
     try {
       const m = await api.createMeeting({
-        title: title.trim(), space_id: spaceId || null, series_id: seriesId || null, mode, keep_audio: keepAudio && mode === "standard",
+        title: title.trim(), space_id: spaceId || null, series_id: seriesId || null, mode, ai_policy: aiPolicy,
+        keep_audio: keepAudio && mode === "standard",
         glossary: glossaryValue, sources, tags: tags.split(/[,，\s]+/).filter(Boolean),
       });
       if (start) await api.action(m.id, "start");
@@ -145,6 +147,17 @@ export function NewMeeting({ query }: { query: URLSearchParams }) {
                   <Switch checked={keepAudio} onChange={setKeepAudio} label="會後保存錄音（FLAC，存在這台 Mac）" />
                 </div>
               )}
+            </div>
+
+            <div>
+              <span className="field-label">AI 會議記錄</span>
+              <SegmentedControl value={aiPolicy} onChange={(v: string) => setAiPolicy(v as "economy" | "quality")}
+                options={[{ value: "economy", label: "節省" }, { value: "quality", label: "高品質" }]} />
+              <div className="hint">
+                {aiPolicy === "economy"
+                  ? "攢一小段內容才整理一次（約 30 秒），閒聊不送 AI；成本約為高品質模式的幾分之一。"
+                  : "每十幾秒更新一次、用較強的模型整理，記錄最即時，成本較高。"}
+              </div>
             </div>
 
             <div>

@@ -32,8 +32,11 @@ class Settings(BaseModel):
     asr_port: int = 8178
     port: int = 8765
     llm_provider: str = "ica"
-    fast_model: str = "claude-haiku-4-5"
-    reflect_model: str = "claude-sonnet-4-6"
+    # 會議記錄兩種模式的模型（成本與品質量測見 services/realtime/eval/replay_minutes.py、docs/09 §5）
+    economy_fast_model: str = "claude-haiku-4-5"
+    economy_reflect_model: str = "claude-haiku-4-5"
+    quality_fast_model: str = "claude-haiku-4-5"
+    quality_reflect_model: str = "claude-sonnet-4-6"
     trusted_hosts: list[str] = ["127.0.0.1", "::1"]   # 可操作與讀取資料的來源（預設只有本機）
 
 
@@ -99,7 +102,10 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
             app.state.asr = server
         else:
             app.state.asr = asr
-        llm_settings = {"provider": settings.llm_provider, "fast_model": settings.fast_model, "reflect_model": settings.reflect_model}
+        llm_settings = {"provider": settings.llm_provider, "modes": {
+            "economy": {"fast_model": settings.economy_fast_model, "reflect_model": settings.economy_reflect_model},
+            "quality": {"fast_model": settings.quality_fast_model, "reflect_model": settings.quality_reflect_model},
+        }}
         if llm is not None:
             llm_settings["llm"] = llm
         app.state.manager = SessionManager(app.state.store, app.state.asr, hub.broadcast, llm_settings)
@@ -145,7 +151,9 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
         live = mgr().capturing()
         return {
             "asr_model": settings.asr_model,
-            "llm": {"provider": settings.llm_provider, "fast_model": settings.fast_model, "reflect_model": settings.reflect_model},
+            "llm": {"provider": settings.llm_provider,
+                    "economy": [settings.economy_fast_model, settings.economy_reflect_model],
+                    "quality": [settings.quality_fast_model, settings.quality_reflect_model]},
             "capturing": live.id if live else None,
             "interrupted": [m for m in (st().meeting(i) for i in app.state.interrupted) if m and m["status"] == "interrupted"],
             "lan_url": f"http://{lan_ip()}:{settings.port}",
@@ -219,6 +227,7 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
         series_id: str | None = None
         tags: list[str] | None = None
         mode: str | None = None
+        ai_policy: str | None = None
         keep_audio: bool | None = None
         glossary: str | None = None
         sources: list[dict] | None = None
@@ -237,10 +246,13 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
             raise HTTPException(400, "請輸入會議名稱")
         if body.mode not in (None, "standard", "ephemeral"):
             raise HTTPException(400, "mode 只能是 standard 或 ephemeral")
+        if body.ai_policy not in (None, "economy", "quality"):
+            raise HTTPException(400, "ai_policy 只能是 economy 或 quality")
         sources = body.sources or [{"speaker": "我", "device": None}]
         return st().create_meeting(
             body.title.strip(), space_id=body.space_id, series_id=body.series_id, mode=body.mode or "standard",
             keep_audio=bool(body.keep_audio), glossary=body.glossary or "", sources=sources, tags=body.tags or [],
+            ai_policy=body.ai_policy or "economy",
         )
 
     @app.get("/api/meetings/{meeting_id}")

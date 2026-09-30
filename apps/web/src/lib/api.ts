@@ -14,6 +14,7 @@ export interface Meeting {
   series_id: string | null;
   status: Status;
   mode: "standard" | "ephemeral";
+  ai_policy?: "economy" | "quality";
   keep_audio: boolean;
   glossary: string;
   sources: SourceConf[];
@@ -34,9 +35,13 @@ export interface Item {
   utt_ids: string[]; history: Revision[];
 }
 export interface Minutes { version: number; reflected_at: number | null; summary: { topic: string; points: string[] }[]; items: Item[]; utt_t: Record<string, number> }
+export interface Hint {
+  id: string; t: number; trigger: string; target: string; target_t: number; jump: string | null; matched: string[]; score: number;
+  meta: { id?: string; kind?: Kind; text?: string; status?: string; value?: string | null; answer?: string | null; superseded_by?: string | null; speaker?: string };
+}
 export interface Stats { utterances: number; first_p50: number | null; final_p50: number | null; infer_p50: number | null; llm_calls?: number }
 export interface Snapshot {
-  type: "snapshot"; meeting: Meeting; utts: Utt[]; minutes: Minutes | null; stats: Stats;
+  type: "snapshot"; meeting: Meeting; utts: Utt[]; minutes: Minutes | null; stats: Stats; hints?: Hint[];
   pauses: { start_t: number; end_t: number | null }[]; clock: number; running: boolean;
 }
 export interface Devices { inputs: { id: number; name: string; channels: number; default: boolean }[]; systap: boolean }

@@ -15,7 +15,9 @@
 """
 import asyncio
 import json
+import re
 import time
+from dataclasses import dataclass
 from typing import Literal
 
 from pydantic import BaseModel
@@ -35,6 +37,41 @@ STATUS_ZH = {"confirmed": "確認", "superseded": "已被取代", "reversed": "�
 FIELDS_ZH = {"text": "內容", "owner": "負責人", "due": "期限", "value": "數值", "answer": "答案", "status": "狀態",
              "superseded_by": "被取代為"}
 MAX_REFLECT_LINES = 400
+
+# 可能跟決策、待辦、問題、數字有關的字詞。節省模式下，新句子裡完全沒有這些字的閒聊不送 LLM
+#（之後的整理仍會讀到這些句子）。
+SALIENT = re.compile(
+    r"決定|決議|確定|定案|拍板|就這樣|同意|通過|改(成|用|為|由)|換成|取消|不做|先用|維持|追加|調整"
+    r"|我來|我會|我負責|你(來|負責|處理|幫)|交給|負責|誰|期限|之前|截止|deadline|owner"
+    r"|下(禮拜|週|周|個月|次)|明天|今天|月底|月初|號|多少|幾|嗎|呢|？|\?|什麼時候|要不要|是否"
+    r"|預算|報價|成本|價格|萬|億|百分之|%|\d",
+    re.I,
+)
+
+
+@dataclass(frozen=True)
+class Policy:
+    """會議記錄的 LLM 呼叫策略。quality＝高品質（呼叫多、貴）；economy＝節省（呼叫少、輸入小）。"""
+    name: str
+    fast_mode: Literal["interval", "event"] = "interval"
+    fast_interval: float = 12.0      # interval：每幾秒跑一次（有新句子才跑）
+    min_gap: float = 8.0             # event：兩次 fast 至少間隔幾秒
+    min_chars: int = 40              # event：新句子累積多少字才跑
+    max_wait: float = 60.0           # event：未處理的句子最多等幾秒
+    salience_gate: bool = False      # 新句子都沒有 SALIENT 字詞時不送 LLM
+    ctx_lines: int = 8               # fast 附上的前文句數
+    compact_state: bool = False      # 已結束的項目只送 id、狀態與前 30 字
+    reflect_interval: float = 150.0
+    reflect_min_lines: int = 1       # 上次整理後至少多少新句子才整理
+    reflect_scope: Literal["full", "recent"] = "full"   # recent：只送上次整理之後的逐字稿＋目前摘要
+
+
+POLICIES = {
+    "quality": Policy("quality"),
+    # v2：fast 攢批（至少 30 秒一次）、輸入精簡、整理只看新內容；搭配便宜的 fast 模型（見 eval/replay_minutes.py）
+    "economy": Policy("economy", fast_mode="event", min_gap=30, min_chars=80, max_wait=90, salience_gate=True,
+                      ctx_lines=4, compact_state=True, reflect_interval=300, reflect_min_lines=8, reflect_scope="recent"),
+}
 
 
 class Revision(BaseModel):
@@ -104,7 +141,8 @@ class Correction(BaseModel):
 
 
 class Reflection(BaseModel):
-    items: list[ReflectItem]
+    items: list[ReflectItem]          # 有修改或新增的項目（完整內容）
+    unchanged: list[str] = []         # 沒有修改、原樣保留的既有項目 id（不用重寫內容，省 output tokens）
     summary: list[Topic]
     corrections: list[Correction]
 
@@ -139,7 +177,7 @@ FAST_SYSTEM = f"""你是會議助理 ELIVO 的即時記錄員。你會收到：�
 - resolve：既有的問題被回答了。id 填該問題，answer 填答案。
 - retract：先前的項目其實記錯了（例如把提議當成決策）。
 
-每個操作都要有 reason（一句話說明依據）與 utt_ids（依據的句子 id）。id 只能用目前記錄裡已經存在的 id；同一件事不要重複新增，新增前先檢查目前記錄。
+每個操作都要有 reason（15 字以內，說明依據）與 utt_ids（依據的句子 id）。id 只能用目前記錄裡已經存在的 id；同一件事不要重複新增，新增前先檢查目前記錄。
 
 {COMMON_RULES}"""
 
@@ -147,7 +185,8 @@ REFLECT_SYSTEM = f"""你是會議助理 ELIVO 的記錄審稿人。即時記錄�
 
 請重讀全文，輸出修正後的完整會議記錄：
 
-items：所有項目，包含已被取代、已回答、已撤回的（歷史要保留，不要刪除）。既有項目沿用原 id；新增的項目 id 用 new-1、new-2…
+items：只列「有修改」與「新增」的項目，寫出完整內容。既有項目沿用原 id；新增的項目 id 用 new-1、new-2…
+unchanged：沒有任何修改的既有項目，只列 id。沒有寫到的既有項目也會原樣保留；要撤回記錯或重複的項目，請在 items 裡把它的 status 設為 retracted。
 - 決策被後來的決策取代：舊項目 status=superseded，superseded_by 指向新項目的 id。
 - 數字被更新：舊數字 status=superseded，superseded_by 指向新數字的 id。
 - 問題被回答：status=answered，answer 填答案。
@@ -160,9 +199,18 @@ corrections：這次你修改了哪些項目、為什麼（每筆一句話，id 
 
 只修正真正的錯誤（記錯、漏記、重複、狀態或負責人不對）。沒有錯的項目，text 與其他欄位原樣保留，不要為了措辭改寫。
 
+如果提供的逐字稿只是「上次整理之後」的部分：前面的內容已經反映在目前記錄與目前摘要裡。沒有出現在這段逐字稿的既有項目，除非有明確證據要修改，否則原樣列出；摘要要涵蓋整場會議，不只這一段。
+
 {KINDS}
 
 {COMMON_RULES}"""
+
+
+# 精簡的輸出格式範例（給沒有 structured outputs 的供應商，取代完整 JSON Schema）
+FAST_FORMAT = """格式（沒有的欄位給 null）：
+{"ops":[{"op":"add|update|supersede|resolve|retract","id":"既有項目 id，add 時為 null","kind":"decision|action|question|number（add、supersede 時必填）","text":"內容","owner":null,"due":null,"value":null,"answer":null,"status":null,"reason":"15 字內","utt_ids":["我-3"]}]}"""
+REFLECT_FORMAT = """格式（沒有的欄位給 null）：
+{"unchanged":["D2","A1"],"items":[{"id":"D1 或 new-1","kind":"decision|action|question|number","text":"內容","status":"狀態","owner":null,"due":null,"value":null,"answer":null,"superseded_by":null,"utt_ids":["我-3"]}],"summary":[{"topic":"主題","points":["重點"]}],"corrections":[{"id":"D1","change":"修改了什麼、為什麼"}]}"""
 
 
 def timecode(s: float | None) -> str:
@@ -172,13 +220,15 @@ def timecode(s: float | None) -> str:
 
 class MinutesEngine:
     def __init__(self, emit, on_record, clock, provider: str = "ica", fast_model: str = "claude-haiku-4-5",
-                 reflect_model: str = "claude-sonnet-4-6", fast_interval: float = 12.0, reflect_interval: float = 150.0,
+                 reflect_model: str = "claude-sonnet-4-6", policy: Policy | str = "quality",
                  glossary: list[str] | None = None, llm=None):
         self.llm = llm or PROVIDERS[provider]()  # 測試時可注入假的 LLM
         self.provider = provider
         self.emit, self.on_record, self.clock = emit, on_record, clock
         self.fast_model, self.reflect_model = fast_model, reflect_model
-        self.fast_interval, self.reflect_interval = fast_interval, reflect_interval
+        self.policy = POLICIES[policy] if isinstance(policy, str) else policy
+        self.last_fast_at = 0.0
+        self.last_reflect_at = 0.0
         self.items: dict[str, Item] = {}
         self.summary: list[Topic] = []
         self.reflected_at: float | None = None
@@ -202,12 +252,41 @@ class MinutesEngine:
         self.utt_t[ev["id"]] = ev.get("t", 0.0)
 
     async def run(self):
-        await asyncio.gather(self._loop(self.fast, self.fast_interval), self._loop(self.reflect, self.reflect_interval))
-
-    async def _loop(self, fn, interval):
+        """每秒檢查一次：依策略決定要不要跑 fast／reflect。"""
         while self.enabled:
-            await asyncio.sleep(interval)
-            await fn()
+            await asyncio.sleep(1.0)
+            await self.tick()
+
+    async def tick(self):
+        now = self.clock()
+        if self.due_fast(now):
+            await self.fast()
+        if self.due_reflect(now):
+            await self.reflect()
+
+    def due_fast(self, now: float) -> bool:
+        pending = self.lines[self.fast_cursor:]
+        if not pending or self.lock.locked():
+            return False
+        p = self.policy
+        since = now - self.last_fast_at
+        if p.fast_mode == "interval":
+            return since >= p.fast_interval
+        if since < p.min_gap:
+            return False
+        waited = now - pending[0]["t"]
+        salient = not p.salience_gate or any(SALIENT.search(l["text"]) for l in pending)
+        if not salient:
+            if waited >= p.max_wait:
+                # 一段時間都是閒聊：標記為已處理但不呼叫 LLM（之後的整理仍會讀到）
+                self.fast_cursor = len(self.lines)
+            return False
+        return sum(len(l["text"]) for l in pending) >= p.min_chars or waited >= p.max_wait / 3
+
+    def due_reflect(self, now: float) -> bool:
+        p = self.policy
+        return (len(self.lines) - self.reflect_cursor >= p.reflect_min_lines
+                and now - self.last_reflect_at >= p.reflect_interval)
 
     async def finish(self):
         """會議結束：把剩下的句子跑完 fast，再整體整理一次。"""
@@ -224,13 +303,14 @@ class MinutesEngine:
         if not self.enabled or self.fast_cursor >= len(self.lines):
             return
         end = len(self.lines)
-        ctx = self.lines[max(0, self.fast_cursor - 8):self.fast_cursor]
+        self.last_fast_at = self.clock()
+        ctx = self.lines[max(0, self.fast_cursor - self.policy.ctx_lines):self.fast_cursor]
         prompt = (
-            f"{self.glossary}目前的會議記錄：\n{self._state_for_prompt()}\n\n"
+            f"{self.glossary}目前的會議記錄：\n{self._state_for_prompt(compact=self.policy.compact_state)}\n\n"
             f"先前的逐字稿（已處理，只供理解上下文）：\n{self._fmt(ctx) or '（無）'}\n\n"
             f"新的逐字稿：\n{self._fmt(self.lines[self.fast_cursor:end])}"
         )
-        res = await self._call("fast", self.fast_model, FAST_SYSTEM, prompt, OpBatch, 4096, n_lines=end)
+        res = await self._call("fast", self.fast_model, FAST_SYSTEM, prompt, OpBatch, 4096, n_lines=end, format_hint=FAST_FORMAT)
         if res is None:
             return
         if res is not Retry:
@@ -280,11 +360,17 @@ class MinutesEngine:
         async with self.lock:
             await self._fast_locked()
             end, seq0 = self.fast_cursor, self.seq
-            prompt = (
-                f"{self.glossary}目前的會議記錄：\n{self._state_for_prompt(with_evidence=True)}\n\n"
-                f"到目前為止的完整逐字稿：\n{self._fmt(self.lines[-MAX_REFLECT_LINES:end])}"
-            )
-        res = await self._call("reflect", self.reflect_model, REFLECT_SYSTEM, prompt, Reflection, 12000, n_lines=end)
+            self.last_reflect_at = self.clock()
+            if self.policy.reflect_scope == "recent" and self.reflect_cursor > 0:
+                # 只送上次整理之後的逐字稿（多帶 6 句前文）＋目前摘要；前面的內容已在記錄與摘要裡
+                start = max(0, self.reflect_cursor - 6)
+                summary = json.dumps([t.model_dump() for t in self.summary], ensure_ascii=False, separators=(",", ":"))
+                transcript = f"目前摘要：\n{summary}\n\n上次整理之後的逐字稿：\n{self._fmt(self.lines[start:end])}"
+            else:
+                transcript = f"到目前為止的完整逐字稿：\n{self._fmt(self.lines[-MAX_REFLECT_LINES:end])}"
+            prompt = f"{self.glossary}目前的會議記錄：\n{self._state_for_prompt(with_evidence=True)}\n\n{transcript}"
+        res = await self._call("reflect", self.reflect_model, REFLECT_SYSTEM, prompt, Reflection, 12000, n_lines=end,
+                               format_hint=REFLECT_FORMAT)
         if not isinstance(res, Reflection):
             return
         self._merge(res, seq0)
@@ -322,18 +408,13 @@ class MinutesEngine:
             if changes:
                 self._change(item, changes, "reflect", corrections.get(ri.id, "重讀全文後修正"),
                              [u for u in ri.utt_ids if u in self.utt_t])
-        # 整理結果裡沒有、也不是整理期間新增的項目：視為記錯或重複，撤回但保留歷史
-        kept = {ri.id for ri in res.items}
-        for item in list(self.items.values()):
-            if item.id not in kept and item.id not in fresh and item.status != "retracted" and item.id not in idmap.values():
-                self._change(item, {"status": "retracted"}, "reflect", corrections.get(item.id, "整理時判斷為重複或記錯"), [])
 
     # ---- 共用 ----
 
-    async def _call(self, role, model, system, prompt, schema, max_tokens, n_lines):
+    async def _call(self, role, model, system, prompt, schema, max_tokens, n_lines, format_hint=None):
         t0 = time.monotonic()
         try:
-            out, usage = await self.llm.complete_json(model, system, prompt, schema, max_tokens)
+            out, usage = await self.llm.complete_json(model, system, prompt, schema, max_tokens, format_hint=format_hint)
         except Disable as e:
             print(f"會議記錄：{e}，停用", flush=True)
             self.enabled = False
@@ -348,7 +429,7 @@ class MinutesEngine:
             if role == "reflect" and model != self.fast_model:
                 print(f"會議記錄：{e}；整理改用 {self.fast_model}", flush=True)
                 self.reflect_model = self.fast_model
-                return await self._call(role, self.fast_model, system, prompt, schema, max_tokens, n_lines)
+                return await self._call(role, self.fast_model, system, prompt, schema, max_tokens, n_lines, format_hint)
             print(f"會議記錄（{role}）：{e}", flush=True)
             return Skip
         self.on_record({"type": "llm", "pass": role, "provider": self.provider, "model": model,
@@ -390,10 +471,15 @@ class MinutesEngine:
     def _fmt(self, lines: list[dict]) -> str:
         return "\n".join(f"[{l['id']} {timecode(l['t'])}] {l['speaker']}：{l['text']}" for l in lines)
 
-    def _state_for_prompt(self, with_evidence: bool = False) -> str:
+    def _state_for_prompt(self, with_evidence: bool = False, compact: bool = False) -> str:
+        active = {"decision": "confirmed", "action": "open", "question": "open", "number": "current"}
         rows = []
         for it in self.items.values():
             if it.status == "retracted" and not with_evidence:
+                continue
+            if compact and it.status != active[it.kind]:
+                # 已被取代、已回答、完成的項目：只需要知道它存在，避免重複新增
+                rows.append({"id": it.id, "status": it.status, "text": it.text[:30]})
                 continue
             d = {"id": it.id, "kind": it.kind, "text": it.text, "status": it.status}
             for k in ("owner", "due", "value", "answer", "superseded_by"):
@@ -402,7 +488,7 @@ class MinutesEngine:
             if with_evidence:
                 d["utt_ids"] = it.utt_ids
             rows.append(d)
-        return json.dumps(rows, ensure_ascii=False) if rows else "（目前沒有項目）"
+        return json.dumps(rows, ensure_ascii=False, separators=(",", ":")) if rows else "（目前沒有項目）"
 
     def export(self) -> dict:
         return {

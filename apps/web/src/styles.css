@@ -329,6 +329,31 @@ textarea.field:focus { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 0 0
 .tone-question { color: var(--info); }
 .tone-number { color: var(--warn); }
 
+/* ---- 前面提過 ---- */
+.hints { padding-top: 16px; }
+.hint {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--glass-fill-thin);
+  box-shadow: var(--glass-edge);
+  color: var(--text-2);
+  text-align: left;
+  cursor: pointer;
+  animation: elivo-surface var(--dur-surface) var(--ease-out);
+}
+.hint:hover { background: var(--glass-fill); }
+.hint.latest { background: var(--glass-fill); color: var(--text-1); }
+.hint .glow { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; animation: glow 2.6s var(--ease-out) forwards; }
+.hint-head { display: flex; align-items: center; gap: 8px; }
+.hint-text { font: 400 14px/1.5 var(--font-sans); text-wrap: pretty; }
+.hint-sub { font: 400 12.5px/1.5 var(--font-sans); color: var(--text-3); }
+
 /* ---- 會後 ---- */
 .detail { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; padding: 12px; }
 .detail-head { padding: 22px 26px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }

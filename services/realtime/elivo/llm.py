@@ -61,11 +61,13 @@ class AnthropicProvider:
         self.anthropic = anthropic
         self.client = anthropic.AsyncAnthropic(api_key=require_key("ANTHROPIC_API_KEY", "elivo-anthropic-api-key"))
 
-    async def complete_json(self, model: str, system: str, prompt: str, schema: type[BaseModel], max_tokens: int = 8192):
+    async def complete_json(self, model: str, system: str, prompt: str, schema: type[BaseModel], max_tokens: int = 8192,
+                            format_hint: str | None = None):
         a = self.anthropic
         try:
             resp = await self.client.messages.parse(
-                model=model, max_tokens=max_tokens, system=system,
+                # system 固定不變，標記快取：前綴長度達到模型的最低門檻時，重複的部分以快取價計費（門檻待驗證）
+                model=model, max_tokens=max_tokens, system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
                 messages=[{"role": "user", "content": prompt}], output_format=schema,
             )
         except a.AuthenticationError:
@@ -94,12 +96,12 @@ class ICAProvider:
             headers={"Authorization": f"Bearer {require_key('ICA_API_KEY', 'elivo-ica-api-key')}"},
         )
 
-    async def complete_json(self, model: str, system: str, prompt: str, schema: type[BaseModel], max_tokens: int = 8192):
-        # 沒有 structured outputs：把 schema 寫進 system prompt，回覆再驗證
-        system = (
-            system + "\n\n只輸出一個 JSON 物件，不要有任何說明文字或 Markdown，格式必須符合這個 JSON Schema：\n"
-            + json.dumps(schema.model_json_schema(), ensure_ascii=False)
-        )
+    async def complete_json(self, model: str, system: str, prompt: str, schema: type[BaseModel], max_tokens: int = 8192,
+                            format_hint: str | None = None):
+        # 沒有 structured outputs：把格式寫進 system prompt，回覆再用 Pydantic 驗證。
+        # 有精簡的格式範例就用範例（完整 JSON Schema 約多 650 tokens，每次呼叫都要付）
+        spec = format_hint or ("格式必須符合這個 JSON Schema：\n" + json.dumps(schema.model_json_schema(), ensure_ascii=False))
+        system = system + "\n\n只輸出一個 JSON 物件，不要有任何說明文字或 Markdown。" + spec
         body = {
             "model": model, "temperature": 0, "max_tokens": max_tokens,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": prompt}],

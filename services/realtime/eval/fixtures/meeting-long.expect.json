@@ -1,0 +1,22 @@
+{
+  "description": "meeting-long.txt 結束時會議記錄應呈現的狀態。match：任一關鍵字；match_all：全部關鍵字都要出現（text／value／answer／owner 合併比對）。",
+  "checks": [
+    {"name": "決策：照目前設計稿往下做", "kind": "decision", "match": ["設計稿"], "status": ["confirmed"]},
+    {"name": "CMS 用 Strapi（決策，或問題已回答 Strapi）", "any_of": [
+      {"kind": "decision", "match_all": ["strapi"], "status": ["confirmed"]},
+      {"kind": "question", "match": ["cms"], "status": ["answered"], "answer": ["Strapi", "strapi"]}]},
+    {"name": "講師改由我主講（決策，或由我負責講授的待辦）", "any_of": [
+      {"kind": "decision", "match": ["講師", "主講"], "exclude": ["amy"], "status": ["confirmed"]},
+      {"kind": "action", "match": ["講師", "主講", "講授"], "exclude": ["amy"], "status": ["open"], "owner": ["我"]}]},
+    {"name": "數字或決策：社群廣告 40 萬（現值）", "kind": ["number", "decision"], "match": ["社群"], "match_all": ["40"], "status": ["current", "confirmed"]},
+    {"name": "數字或決策：實體活動 60 萬（現值）", "kind": ["number", "decision"], "match": ["實體"], "match_all": ["60"], "status": ["current", "confirmed"]},
+    {"name": "數字：行銷預算總額 100 萬（現值）", "kind": "number", "match": ["100", "一百"], "status": ["current"]},
+    {"name": "數字：預算 80 萬已被取代", "kind": "number", "match": ["80", "八十"], "status": ["superseded"]},
+    {"name": "待辦：前端切版由我負責", "kind": "action", "match": ["切版", "前端", "首頁"], "status": ["open"], "owner": ["我"]},
+    {"name": "待辦：場地檔期由他人詢問", "kind": "action", "match": ["場地", "檔期"], "status": ["open"], "owner": ["他人"]},
+    {"name": "待辦：Strapi 架設由他人負責", "kind": "action", "match": ["架設", "測試環境"], "status": ["open"], "owner": ["他人"]},
+    {"name": "待辦：SEO 報告由我撰寫", "kind": "action", "match": ["seo"], "status": ["open"], "owner": ["我"]},
+    {"name": "問題：SEO 報告何時交，已回答 10/31", "kind": "question", "match": ["seo"], "status": ["answered"], "answer": ["31", "三十一"]},
+    {"name": "問題：官網何時上線，延後或未答", "kind": "question", "match": ["上線"], "status": ["open", "deferred"]}
+  ]
+}

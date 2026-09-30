@@ -116,9 +116,11 @@ export function Transcript({ utts, pauses = [], focus, emptyText = "等待說話
   const scrollToLatest = () => {
     const el = scroll.current;
     if (!el || Math.abs(el.scrollTop - target()) < 2) return;
+    // 距離超過一個畫面（例如剛打開頁面就有很多句）直接跳過去；平滑捲動太久會被誤判成使用者往上捲
+    const far = Math.abs(el.scrollTop - target()) > el.clientHeight;
     programmatic.current = true;
     window.setTimeout(() => { programmatic.current = false; }, 800);
-    el.scrollTo({ top: target(), behavior: reduced ? "auto" : "smooth" });
+    el.scrollTo({ top: target(), behavior: reduced || far ? "auto" : "smooth" });
   };
   useLayoutEffect(() => { if (stick && live) scrollToLatest(); });
 

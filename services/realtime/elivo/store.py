@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS meetings (
   title TEXT NOT NULL,
   status TEXT NOT NULL,             -- draft / live / paused / ending / ended / confirmed / interrupted
   mode TEXT NOT NULL DEFAULT 'standard',   -- standard / ephemeral
+  ai_policy TEXT NOT NULL DEFAULT 'economy',  -- 會議記錄的 LLM 策略：economy（節省）/ quality（高品質）
   keep_audio INTEGER NOT NULL DEFAULT 0,
   glossary TEXT NOT NULL DEFAULT '',
   sources TEXT NOT NULL DEFAULT '[]',      -- [{"speaker": "我", "device": ...}]
@@ -65,7 +66,7 @@ CREATE INDEX IF NOT EXISTS meetings_space ON meetings(space_id, created_at);
 CREATE INDEX IF NOT EXISTS meetings_series ON meetings(series_id, created_at);
 """
 
-MEETING_FIELDS = ("title", "space_id", "series_id", "mode", "keep_audio", "glossary", "sources", "status",
+MEETING_FIELDS = ("title", "space_id", "series_id", "mode", "ai_policy", "keep_audio", "glossary", "sources", "status",
                   "started_at", "ended_at", "duration_s", "minutes", "stats")
 JSON_FIELDS = ("sources", "minutes", "stats")
 
@@ -90,6 +91,9 @@ class Store:
         cols = {r[1] for r in self.db.execute("PRAGMA table_info(utterances)")}
         if "edited" not in cols:
             self.db.execute("ALTER TABLE utterances ADD COLUMN edited INTEGER NOT NULL DEFAULT 0")
+        cols = {r[1] for r in self.db.execute("PRAGMA table_info(meetings)")}
+        if "ai_policy" not in cols:
+            self.db.execute("ALTER TABLE meetings ADD COLUMN ai_policy TEXT NOT NULL DEFAULT 'economy'")
 
     def _q(self, sql, args=()):
         with self.lock:
@@ -183,12 +187,13 @@ class Store:
         return [self._meeting_row(r) for r in self._q(sql, args)]
 
     def create_meeting(self, title: str, space_id=None, series_id=None, mode="standard", keep_audio=False,
-                       glossary="", sources=None, tags=()) -> dict:
+                       glossary="", sources=None, tags=(), ai_policy="economy") -> dict:
         mid = new_id("m")
         self._x(
-            "INSERT INTO meetings(id, space_id, series_id, title, status, mode, keep_audio, glossary, sources, created_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?)",
-            (mid, space_id, series_id, title, "draft", mode, int(keep_audio), glossary, json.dumps(sources or [], ensure_ascii=False), time.time()),
+            "INSERT INTO meetings(id, space_id, series_id, title, status, mode, ai_policy, keep_audio, glossary, sources, created_at)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (mid, space_id, series_id, title, "draft", mode, ai_policy, int(keep_audio), glossary,
+             json.dumps(sources or [], ensure_ascii=False), time.time()),
         )
         self.set_tags(mid, tags)
         return self.meeting(mid)

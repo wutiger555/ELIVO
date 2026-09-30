@@ -21,6 +21,7 @@ from .asr.stream_engine import StreamEngine
 from .capture import SPEAKER_SLUG, Source, rms, start_source
 from .config import AUDIO_DIR, SPOOL_DIR
 from .minutes import MinutesEngine
+from .recall import Recall
 
 LEVEL_INTERVAL = 0.2
 ACTIVE = {"decision": "confirmed", "action": "open", "question": "open", "number": "current"}
@@ -50,7 +51,10 @@ class MeetingSession:
         self.minutes_task = None
         self.minutes_error = None
 
+        self.recall = Recall(self.glossary)   # 「前面說過」提示：本機關鍵字檢索，不用 LLM
+        self.hints: list[dict] = []
         lines = store.utterances(self.id)
+        self.recall.load(lines)
         for l in lines:
             self.utts[l["id"]] = {"type": "utt", "id": l["id"], "speaker": l["speaker"], "committed": l["text"],
                                   "tentative": "", "final": True, "t": l["t"], "edited": bool(l["edited"])}
@@ -59,13 +63,17 @@ class MeetingSession:
             self.counters[sp] = itertools.count(n + 1)
 
         finished = meeting["status"] in ("ended", "confirmed")
-        settings = dict(llm_settings)
-        injected = settings.pop("llm", None)   # 測試用的假 LLM
+        injected = llm_settings.get("llm")   # 測試用的假 LLM
+        policy = meeting.get("ai_policy") or "economy"
+        models = llm_settings["modes"][policy]
         try:
             # 已結束的會議只需要編輯記錄，不會再呼叫 LLM
             self.minutes = MinutesEngine(self._on_minutes, self._record, clock=self.clock, glossary=self.glossary,
-                                         llm=object() if finished else injected, **settings)
+                                         provider=llm_settings["provider"], policy=policy, llm=object() if finished else injected,
+                                         fast_model=models["fast_model"], reflect_model=models["reflect_model"])
             self.minutes.restore(meeting.get("minutes"), lines)
+            m = meeting.get("minutes") or {}
+            self.recall.set_items(m.get("items", []), m.get("utt_t", {}))
         except SystemExit as e:  # 缺少 LLM 金鑰：逐字稿照常，會議記錄停用
             self.minutes, self.minutes_error = None, str(e).splitlines()[0]
 
@@ -101,6 +109,7 @@ class MeetingSession:
             "utts": list(self.utts.values()),
             "minutes": self.minutes.export() if self.minutes else self.meeting.get("minutes"),
             "stats": self.stats(),
+            "hints": self.hints,
             "pauses": self.store.pauses(self.id),
             "clock": self.clock(),
             "running": self.resumed_at is not None,
@@ -223,6 +232,8 @@ class MeetingSession:
             self.store.delete_utterance(self.id, uid)
         if self.minutes:
             self.minutes.delete_line(uid)
+        self.recall.delete_utt(uid)
+        self.hints = [h for h in self.hints if uid not in (h["trigger"], h["jump"])]
         self.broadcast(self.id, {"type": "utt_deleted", "id": uid})
 
     # ---- 擷取 ----
@@ -295,9 +306,15 @@ class MeetingSession:
             self.store.update_meeting(self.id, duration_s=self.clock())
             if self.minutes:
                 self.minutes.add_final(ev)
+            hint = self.recall.add_utt(ev["id"], ev["speaker"], ev["committed"], ev["t"])
+            if hint:
+                self.hints.append(hint)
         self.broadcast(self.id, ev)
+        if ev["final"] and ev["committed"] and self.hints and self.hints[-1]["trigger"] == ev["id"]:
+            self.broadcast(self.id, {"type": "hint", "hint": self.hints[-1]})
 
     def _on_minutes(self, ev: dict):
+        self.recall.set_items(ev["minutes"]["items"], ev["minutes"].get("utt_t", {}))
         # Ephemeral 會議在確認前不寫入；確認後保存的是精簡版（只有決策與待辦）
         if not self.ephemeral or self.status == "confirmed":
             self.store.update_meeting(self.id, minutes=ev["minutes"])

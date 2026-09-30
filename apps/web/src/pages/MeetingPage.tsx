@@ -7,6 +7,7 @@ import { Icon } from "@design/components/core/Icon.jsx";
 import { Tabs } from "@design/components/navigation/Tabs.jsx";
 import { Levels, RecCapsule, Titlebar } from "../components/Chrome";
 import { AskDialog, ConfirmDialog, MeetingEditDialog, PairDialog } from "../components/Dialogs";
+import { Hints } from "../components/Hints";
 import { Minutes, type MinutesEditing } from "../components/Minutes";
 import { Transcript } from "../components/Transcript";
 import { api } from "../lib/api";
@@ -32,6 +33,7 @@ export function LiveBody({ s, emptyMinutes, editing }: { s: MeetingState; emptyM
       <aside className="context panel">
         <div className="label">Live minutes <span className="meta">{m ? `v${m.version}${m.reflected_at != null ? ` · 整理於 ${timecode(m.reflected_at)}` : ""}` : ""}</span></div>
         <div className="scroll">
+          <Hints hints={s.hints} onJump={(id) => setFocus({ id, n: (focus?.n ?? 0) + 1 })} />
           <Minutes minutes={m} emptyText={emptyMinutes} editing={editing?.minutes} onJump={(id) => setFocus({ id, n: (focus?.n ?? 0) + 1 })} />
         </div>
       </aside>

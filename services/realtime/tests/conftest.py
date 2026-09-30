@@ -26,7 +26,7 @@ class FakeLLM:
     def __init__(self):
         self.calls = []
 
-    async def complete_json(self, model, system, prompt, schema, max_tokens=8192):
+    async def complete_json(self, model, system, prompt, schema, max_tokens=8192, format_hint=None):
         self.calls.append(schema.__name__)
         if schema is OpBatch:
             return OpBatch.model_validate({"ops": [{"op": "add", "kind": "decision", "text": "下禮拜三跟 client 開會", "reason": "測試", "utt_ids": []}]}), {}
