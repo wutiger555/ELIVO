@@ -4,6 +4,7 @@ import { Button } from "@design/components/core/Button.jsx";
 import { Icon } from "@design/components/core/Icon.jsx";
 import { Input } from "@design/components/forms/Input.jsx";
 import { Titlebar } from "../components/Chrome";
+import { GroupSettingsDialog } from "../components/Dialogs";
 import { api, type AppStatus, type Meeting, type Space } from "../lib/api";
 import { STATUS_LABEL, dateTime, duration, go } from "../lib/format";
 
@@ -33,9 +34,12 @@ export function Library() {
   const [filter, setFilter] = useState<Filter>({});
   const [q, setQ] = useState("");
   const [addSeries, setAddSeries] = useState<string | null>(null);
+  const [settings, setSettings] = useState(false);
   const [error, setError] = useState("");
 
+  const [listVersion, setListVersion] = useState(0);
   const reload = useCallback(() => {
+    setListVersion((v) => v + 1);
     Promise.all([api.spaces(), api.tags(), api.status()])
       .then(([s, t, st]) => { setSpaces(s); setTags(t); setStatus(st); setError(""); })
       .catch((e) => setError(e.message));
@@ -44,7 +48,7 @@ export function Library() {
   useEffect(() => {
     const id = window.setTimeout(() => api.meetings({ ...filter, q }).then(setMeetings).catch((e) => setError(e.message)), q ? 250 : 0);
     return () => window.clearTimeout(id);
-  }, [filter, q]);
+  }, [filter, q, listVersion]);
 
   const spaceName = (id: string | null) => spaces.find((s) => s.id === id)?.name;
   const seriesName = (id: string | null) => spaces.flatMap((s) => s.series).find((s) => s.id === id)?.name;
@@ -112,6 +116,9 @@ export function Library() {
           <div className="list-head">
             <h1>{heading}</h1>
             <span className="muted">{meetings ? `${meetings.length} 場` : ""}</span>
+            {(filter.space_id || filter.series_id) && (
+              <Button size="sm" variant="ghost" icon="settings-2" onClick={() => setSettings(true)} style={{ marginLeft: "auto" }}>設定</Button>
+            )}
           </div>
           <div className="scroll">
             <div className="meetings">
@@ -138,6 +145,16 @@ export function Library() {
           </div>
         </main>
       </div>
+      {settings && filter.space_id && (() => {
+        const sp = spaces.find((x) => x.id === filter.space_id);
+        return sp && <GroupSettingsDialog kind="space" id={sp.id} name={sp.name} glossary={sp.glossary}
+          onClose={() => { setSettings(false); reload(); }} onDeleted={() => { setSettings(false); setFilter({}); reload(); }} />;
+      })()}
+      {settings && filter.series_id && (() => {
+        const sr = spaces.flatMap((x) => x.series).find((x) => x.id === filter.series_id);
+        return sr && <GroupSettingsDialog kind="series" id={sr.id} name={sr.name}
+          onClose={() => { setSettings(false); reload(); }} onDeleted={() => { setSettings(false); setFilter({ space_id: sr.space_id }); reload(); }} />;
+      })()}
     </div>
   );
 }

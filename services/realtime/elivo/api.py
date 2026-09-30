@@ -249,7 +249,7 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
         return mgr().get(meeting_id).snapshot()
 
     @app.patch("/api/meetings/{meeting_id}")
-    def update_meeting(meeting_id: str, body: MeetingIn):
+    async def update_meeting(meeting_id: str, body: MeetingIn):
         m = meeting_or_404(meeting_id)
         fields = body.model_dump(exclude_none=True)
         if m["status"] != "draft":
@@ -257,7 +257,9 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
             fields = {k: v for k, v in fields.items() if k in ("title", "space_id", "series_id", "tags")}
         updated = st().update_meeting(meeting_id, **fields)
         if meeting_id in mgr().sessions:
-            mgr().sessions[meeting_id].meeting = updated
+            s = mgr().sessions[meeting_id]
+            s.meeting = updated
+            s.notify()   # 開著的會議頁與第二螢幕立即看到新名稱、分類、標籤
         return updated
 
     @app.delete("/api/meetings/{meeting_id}")
@@ -303,6 +305,57 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
     async def confirm(meeting_id: str, body: ConfirmIn):
         await run(mgr().confirm(meeting_id, body.keep, body.edits))
         return mgr().get(meeting_id).snapshot()
+
+    # ---- 手動編輯：會議記錄項目與逐字稿 ----
+
+    class ItemIn(BaseModel):
+        kind: str | None = None
+        text: str | None = None
+        owner: str | None = None
+        due: str | None = None
+        value: str | None = None
+        answer: str | None = None
+        status: str | None = None
+
+    def edit(fn):
+        try:
+            return fn()
+        except SessionError as e:
+            raise HTTPException(409, str(e))
+
+    @app.post("/api/meetings/{meeting_id}/items")
+    async def add_item(meeting_id: str, body: ItemIn):
+        meeting_or_404(meeting_id)
+        s = mgr().get(meeting_id)
+        return edit(lambda: s.add_item(body.kind or "", body.text or "", body.owner, body.due, body.value))
+
+    @app.patch("/api/meetings/{meeting_id}/items/{item_id}")
+    async def edit_item(meeting_id: str, item_id: str, body: ItemIn):
+        meeting_or_404(meeting_id)
+        s = mgr().get(meeting_id)
+        edit(lambda: s.edit_item(item_id, body.model_dump(exclude_none=True, exclude={"kind"})))
+        return s.minutes.items[item_id].model_dump()
+
+    @app.delete("/api/meetings/{meeting_id}/items/{item_id}")
+    async def delete_item(meeting_id: str, item_id: str):
+        meeting_or_404(meeting_id)
+        edit(lambda: mgr().get(meeting_id).delete_item(item_id))
+        return {"ok": True}
+
+    class UttIn(BaseModel):
+        text: str
+
+    @app.patch("/api/meetings/{meeting_id}/utterances/{uid}")
+    async def edit_utt(meeting_id: str, uid: str, body: UttIn):
+        meeting_or_404(meeting_id)
+        edit(lambda: mgr().get(meeting_id).edit_utt(uid, body.text))
+        return {"ok": True}
+
+    @app.delete("/api/meetings/{meeting_id}/utterances/{uid}")
+    async def delete_utt(meeting_id: str, uid: str):
+        meeting_or_404(meeting_id)
+        edit(lambda: mgr().get(meeting_id).delete_utt(uid))
+        return {"ok": True}
 
     @app.get("/api/meetings/{meeting_id}/export.md", response_class=PlainTextResponse)
     def export_md(meeting_id: str):

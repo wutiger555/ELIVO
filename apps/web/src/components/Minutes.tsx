@@ -1,7 +1,11 @@
 // 會議記錄：摘要＋決策／待辦／問題／數字。被取代的劃線變淡並註明改為哪一項；
 // 更新的項目發光並顯示最近一次變更；點時間碼跳回逐字稿；點項目展開修改紀錄。
 import { useState } from "react";
+import { Button } from "@design/components/core/Button.jsx";
 import { Icon } from "@design/components/core/Icon.jsx";
+import { Input } from "@design/components/forms/Input.jsx";
+import { Select } from "@design/components/forms/Select.jsx";
+import { SegmentedControl } from "@design/components/forms/SegmentedControl.jsx";
 import type { Item, Kind, Minutes as M } from "../lib/api";
 import { timecode } from "../lib/format";
 
@@ -18,9 +22,92 @@ const STATUS: Record<string, [string, string]> = {
 };
 const STRUCK = ["superseded", "reversed", "cancelled"];
 const BY = { fast: "即時", reflect: "整理", user: "手動" };
+const KIND_ZH: Record<Kind, string> = { decision: "決策", action: "待辦", question: "問題", number: "數字" };
+const STATUS_OPTIONS: Record<Kind, [string, string][]> = {
+  decision: [["confirmed", "確認"], ["superseded", "已被取代"], ["reversed", "已撤銷"]],
+  action: [["open", "進行中"], ["done", "完成"], ["cancelled", "取消"]],
+  question: [["open", "未答"], ["answered", "已回答"], ["deferred", "延後"]],
+  number: [["current", "現值"], ["superseded", "已被取代"]],
+};
 
-function ItemCard({ it, uttT, onJump }: { it: Item; uttT: Record<string, number>; onJump: (id: string) => void }) {
+export interface MinutesEditing {
+  onAdd: (it: Partial<Item>) => Promise<void>;
+  onEdit: (id: string, changes: Partial<Item>) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+}
+
+/** 新增或修改項目的表單：依類型顯示負責人、期限、數值、答案、狀態。 */
+function ItemForm({ kind, initial, onSave, onCancel, withStatus }: {
+  kind: Kind; initial: Partial<Item>; withStatus: boolean;
+  onSave: (f: Partial<Item>) => Promise<void>; onCancel: () => void;
+}) {
+  const [f, setF] = useState<Partial<Item>>(initial);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const set = (k: keyof Item) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
+  const save = async () => {
+    setBusy(true);
+    try { await onSave(f); } catch (e: any) { setError(e.message); setBusy(false); }
+  };
+  return (
+    <div className="item-form" onClick={(e) => e.stopPropagation()}>
+      <Input size="sm" label="內容" value={f.text ?? ""} onChange={set("text")} />
+      {kind === "action" && (
+        <div className="two">
+          <Input size="sm" label="負責人" value={f.owner ?? ""} onChange={set("owner")} />
+          <Input size="sm" label="期限" value={f.due ?? ""} onChange={set("due")} />
+        </div>
+      )}
+      {kind === "number" && <Input size="sm" label="數值" placeholder="例如 180 萬" value={f.value ?? ""} onChange={set("value")} />}
+      {kind === "question" && withStatus && <Input size="sm" label="答案" value={f.answer ?? ""} onChange={set("answer")} />}
+      {withStatus && (
+        <Select size="sm" label="狀態" value={f.status} onChange={set("status")}
+          options={STATUS_OPTIONS[kind].map(([value, label]) => ({ value, label }))} />
+      )}
+      {error && <div className="error-text">{error}</div>}
+      <div className="row" style={{ justifyContent: "flex-end" }}>
+        <Button size="sm" variant="ghost" onClick={onCancel}>取消</Button>
+        <Button size="sm" variant="primary" disabled={busy || !(f.text ?? "").trim()} onClick={save}>儲存</Button>
+      </div>
+    </div>
+  );
+}
+
+function AddItem({ editing }: { editing: MinutesEditing }) {
+  const [kind, setKind] = useState<Kind | null>(null);
+  if (!kind) {
+    return <Button size="sm" variant="ghost" icon="plus" onClick={() => setKind("action")}>新增項目</Button>;
+  }
+  return (
+    <div className="item">
+      <div style={{ marginBottom: 10 }}>
+        <SegmentedControl size="sm" value={kind} onChange={(v: string) => setKind(v as Kind)}
+          options={(Object.keys(KIND_ZH) as Kind[]).map((k) => ({ value: k, label: KIND_ZH[k] }))} />
+      </div>
+      <ItemForm key={kind} kind={kind} initial={{}} withStatus={false}
+        onSave={async (f) => { await editing.onAdd({ ...f, kind }); setKind(null); }} onCancel={() => setKind(null)} />
+    </div>
+  );
+}
+
+function ItemCard({ it, uttT, onJump, editing }: { it: Item; uttT: Record<string, number>; onJump: (id: string) => void; editing?: MinutesEditing }) {
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"view" | "edit" | "delete">("view");
+  if (mode === "edit" && editing) {
+    return (
+      <div className="item">
+        <div className="item-head"><span className="item-id">{it.id}</span><span className="badge">{KIND_ZH[it.kind]}</span></div>
+        <ItemForm kind={it.kind} withStatus initial={{ text: it.text, owner: it.owner, due: it.due, value: it.value, answer: it.answer, status: it.status }}
+          onCancel={() => setMode("view")}
+          onSave={async (f) => {
+            // 只送改過的欄位：沒動的欄位不會被標成「手動修改」而鎖住
+            const changed = Object.fromEntries(Object.entries(f).filter(([k, v]) => (v ?? "") !== ((it as any)[k] ?? "")));
+            if (Object.keys(changed).length) await editing.onEdit(it.id, changed);
+            setMode("view");
+          }} />
+      </div>
+    );
+  }
   const last = it.history[it.history.length - 1];
   const meta = [["負責", it.owner], ["期限", it.due], ["答案", it.answer], ["改為", it.superseded_by]].filter(([, v]) => v);
   const cls = ["item", it.status !== ACTIVE[it.kind] && "inactive", STRUCK.includes(it.status) && "struck"].filter(Boolean).join(" ");
@@ -56,15 +143,36 @@ function ItemCard({ it, uttT, onJump }: { it: Item; uttT: Record<string, number>
           ))}
         </ul>
       )}
+      {open && editing && (
+        <div className="item-actions" onClick={(e) => e.stopPropagation()}>
+          {mode === "delete" ? (
+            <>
+              <span className="hint" style={{ margin: 0, flex: 1 }}>刪除後保留在修改紀錄，AI 之後也不會再把它加回來。</span>
+              <Button size="sm" variant="ghost" onClick={() => setMode("view")}>取消</Button>
+              <Button size="sm" variant="danger" onClick={() => editing.onDelete(it.id)}>刪除</Button>
+            </>
+          ) : (
+            <>
+              <Button size="sm" variant="ghost" icon="pencil" onClick={() => setMode("edit")}>編輯</Button>
+              <Button size="sm" variant="ghost" icon="trash-2" onClick={() => setMode("delete")}>刪除</Button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-export function Minutes({ minutes, onJump, emptyText }: { minutes: M | null; onJump: (uttId: string) => void; emptyText: string }) {
+export function Minutes({ minutes, onJump, emptyText, editing }: {
+  minutes: M | null; onJump: (uttId: string) => void; emptyText: string; editing?: MinutesEditing;
+}) {
   const items = (minutes?.items ?? []).filter((it) => it.status !== "retracted");
-  if (!minutes || (!items.length && !minutes.summary.length)) return <div className="placeholder">{emptyText}</div>;
+  if (!minutes || (!items.length && !minutes.summary.length)) {
+    return <div className="minutes"><div className="placeholder">{emptyText}</div>{editing && minutes && <AddItem editing={editing} />}</div>;
+  }
   return (
     <div className="minutes">
+      {editing && <div><AddItem editing={editing} /></div>}
       {minutes.summary.length > 0 && (
         <section>
           <div className="group-title tone-summary"><Icon name="file-text" size={13} />SUMMARY</div>
@@ -90,7 +198,7 @@ export function Minutes({ minutes, onJump, emptyText }: { minutes: M | null; onJ
               <span className="n">{list.filter((it) => it.status === ACTIVE[g.kind]).length}</span>
             </div>
             <div className="items">
-              {list.map((it) => <ItemCard key={it.id} it={it} uttT={minutes.utt_t} onJump={onJump} />)}
+              {list.map((it) => <ItemCard key={it.id} it={it} uttT={minutes.utt_t} onJump={onJump} editing={editing} />)}
             </div>
           </section>
         );

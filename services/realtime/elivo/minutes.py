@@ -258,8 +258,8 @@ class MinutesEngine:
                 changes["status"] = op.status
             return self._change(target, changes, "fast", op.reason, ids)
         if op.op == "supersede":
-            if target.kind not in ("decision", "number"):
-                return False
+            if target.kind not in ("decision", "number") or "status" in self.locked.get(target.id, ()):
+                return False  # 使用者手動設定過狀態的項目，AI 不能宣告它被取代
             new = self._new_item(target.kind, op.text or target.text, op.owner, op.due, op.value, ids)
             new.history.append(Revision(t=now, by="fast", change=f"取代 {target.id}：{op.reason}", utt_ids=ids))
             return self._change(target, {"status": "superseded", "superseded_by": new.id}, "fast",
@@ -431,13 +431,43 @@ class MinutesEngine:
         self.fast_cursor = min(cursor.get("fast", len(lines)), len(lines))
         self.reflect_cursor = min(cursor.get("reflect", len(lines)), len(lines))
 
+    # ---- 逐字稿被修改或刪除 ----
+
+    def edit_line(self, uid: str, text: str):
+        """使用者修正了某句逐字稿：之後的 fast／reflect 讀到的是修正後的文字。"""
+        for line in self.lines:
+            if line["id"] == uid:
+                line["text"] = text
+
+    def delete_line(self, uid: str):
+        """使用者刪除了某句逐字稿：從 LLM 的輸入與所有項目的依據中移除（規格 L10）。"""
+        idx = next((i for i, l in enumerate(self.lines) if l["id"] == uid), None)
+        if idx is None:
+            return
+        del self.lines[idx]
+        if idx < self.fast_cursor:
+            self.fast_cursor -= 1
+        if idx < self.reflect_cursor:
+            self.reflect_cursor -= 1
+        self.utt_t.pop(uid, None)
+        for it in self.items.values():
+            if uid in it.utt_ids:
+                it.utt_ids = [u for u in it.utt_ids if u != uid]
+            for r in it.history:
+                if uid in r.utt_ids:
+                    r.utt_ids = [u for u in r.utt_ids if u != uid]
+        self._publish()
+
     # ---- 使用者手動操作（手動改的欄位 AI 不會再覆蓋） ----
 
     def user_update(self, item_id: str, changes: dict, reason: str = "手動修改") -> bool:
         item = self.items.get(item_id)
         if item is None:
             return False
-        allowed = {k: v for k, v in changes.items() if k in ("text", "owner", "due", "value", "answer")}
+        # 空字串視為清除該欄位（例如拿掉負責人）；內容不能清空
+        allowed = {k: (v if v != "" else None) for k, v in changes.items() if k in ("text", "owner", "due", "value", "answer")}
+        if allowed.get("text", "x") is None:
+            allowed.pop("text")
         if changes.get("status") in STATUSES[item.kind]:
             allowed["status"] = changes["status"]
         ok = self._change(item, allowed, "user", reason, [])

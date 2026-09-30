@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 import { Button } from "@design/components/core/Button.jsx";
 import { Checkbox } from "@design/components/forms/Checkbox.jsx";
 import { Input } from "@design/components/forms/Input.jsx";
+import { Select } from "@design/components/forms/Select.jsx";
 import { Dialog } from "@design/components/feedback/Dialog.jsx";
 import { api, type Item, type Minutes } from "../lib/api";
 import { ACTIVE } from "./Minutes";
@@ -117,5 +118,95 @@ export function AskDialog({ title, description, confirm, danger, onConfirm, onCl
       <Button variant="ghost" onClick={onClose}>取消</Button>
       <Button variant={danger ? "danger" : "primary"} disabled={busy} onClick={async () => { setBusy(true); try { await onConfirm(); } finally { setBusy(false); } }}>{confirm}</Button>
     </>} />
+  );
+}
+
+/** 會議資料：改名、移到別的 Space／例行會議、改標籤（會議開始後也能改）。 */
+export function MeetingEditDialog({ meeting, onClose }: { meeting: import("../lib/api").Meeting; onClose: () => void }) {
+  const [spaces, setSpaces] = useState<import("../lib/api").Space[]>([]);
+  const [title, setTitle] = useState(meeting.title);
+  const [spaceId, setSpaceId] = useState(meeting.space_id ?? "");
+  const [seriesId, setSeriesId] = useState(meeting.series_id ?? "");
+  const [tags, setTags] = useState(meeting.tags.join(" "));
+  const [error, setError] = useState("");
+  useEffect(() => { api.spaces().then(setSpaces).catch((e) => setError(e.message)); }, []);
+  const series = spaces.find((s) => s.id === spaceId)?.series ?? [];
+  const save = async () => {
+    if (!title.trim()) { setError("請輸入會議名稱"); return; }
+    try {
+      await api.updateMeeting(meeting.id, {
+        title: title.trim(), space_id: spaceId || null, series_id: seriesId || null, tags: tags.split(/[,，\s]+/).filter(Boolean),
+      });
+      onClose();
+    } catch (e: any) { setError(e.message); }
+  };
+  return (
+    <Dialog title="會議資料" onClose={onClose} width={480} footer={<>
+      <Button variant="ghost" onClick={onClose}>取消</Button>
+      <Button variant="primary" onClick={save}>儲存</Button>
+    </>}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <Input label="會議名稱" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <Select label="Space（客戶／專案）" value={spaceId} onChange={(e) => { setSpaceId(e.target.value); setSeriesId(""); }}
+          options={[{ value: "", label: "未分類" }, ...spaces.map((s) => ({ value: s.id, label: s.name }))]} />
+        <Select label="例行會議" value={seriesId} onChange={(e) => setSeriesId(e.target.value)} disabled={!spaceId}
+          options={[{ value: "", label: "單次會議" }, ...series.map((s) => ({ value: s.id, label: s.name }))]} />
+        <Input label="標籤" placeholder="用逗號或空白分隔" value={tags} onChange={(e) => setTags(e.target.value)} />
+        {error && <div className="error-text">{error}</div>}
+      </div>
+    </Dialog>
+  );
+}
+
+/** Space 或例行會議的設定：改名、術語表（Space）、刪除（會議保留，變成未分類）。 */
+export function GroupSettingsDialog({ kind, id, name, glossary, onClose, onDeleted }: {
+  kind: "space" | "series"; id: string; name: string; glossary?: string; onClose: () => void; onDeleted: () => void;
+}) {
+  const [n, setN] = useState(name);
+  const [g, setG] = useState(glossary ?? "");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [error, setError] = useState("");
+  const label = kind === "space" ? "Space " : "例行會議";   // 中英之間留空白：「Space 設定」
+  const save = async () => {
+    if (!n.trim()) { setError("請輸入名稱"); return; }
+    try {
+      if (kind === "space") await api.updateSpace(id, { name: n.trim(), glossary: g });
+      else await api.updateSeries(id, n.trim());
+      onClose();
+    } catch (e: any) { setError(e.message); }
+  };
+  const remove = async () => {
+    try {
+      if (kind === "space") await api.deleteSpace(id); else await api.deleteSeries(id);
+      onDeleted();
+    } catch (e: any) { setError(e.message); }
+  };
+  return (
+    <Dialog title={`${label}設定`} onClose={onClose} width={480} footer={confirmDelete ? <>
+      <Button variant="ghost" onClick={() => setConfirmDelete(false)}>取消</Button>
+      <Button variant="danger" onClick={remove}>確定刪除</Button>
+    </> : <>
+      <Button variant="ghost" icon="trash-2" onClick={() => setConfirmDelete(true)} style={{ marginRight: "auto" }}>刪除{label}</Button>
+      <Button variant="ghost" onClick={onClose}>取消</Button>
+      <Button variant="primary" onClick={save}>儲存</Button>
+    </>}>
+      {confirmDelete ? (
+        <div className="placeholder" style={{ color: "var(--text-2)" }}>
+          刪除「{name}」{kind === "space" ? "與底下的例行會議" : ""}？裡面的會議都會保留，只是變成{kind === "space" ? "未分類" : "單次會議"}。
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <Input label="名稱" value={n} onChange={(e) => setN(e.target.value)} />
+          {kind === "space" && (
+            <div>
+              <span className="field-label">術語表</span>
+              <textarea className="field" value={g} onChange={(e) => setG(e.target.value)} placeholder="客戶名、產品名、英文縮寫，一行一個" />
+              <div className="hint">在這個 Space 建立新會議時會自動帶入，用於辨識與會議記錄校正。</div>
+            </div>
+          )}
+        </div>
+      )}
+      {error && <div className="error-text">{error}</div>}
+    </Dialog>
   );
 }

@@ -1,31 +1,38 @@
 // 會議頁：依狀態顯示。尚未開始 → 開始；收音中／暫停／未正常結束 → 即時畫面與控制；
 // 整理中 → 等最後整理；待確認 → 30 秒確認；已確認 → 會後檢視（記錄＋逐字稿、匯出、刪除）。
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@design/components/core/Button.jsx";
 import { IconButton } from "@design/components/core/IconButton.jsx";
 import { Icon } from "@design/components/core/Icon.jsx";
 import { Tabs } from "@design/components/navigation/Tabs.jsx";
 import { Levels, RecCapsule, Titlebar } from "../components/Chrome";
-import { AskDialog, ConfirmDialog, PairDialog } from "../components/Dialogs";
-import { Minutes } from "../components/Minutes";
+import { AskDialog, ConfirmDialog, MeetingEditDialog, PairDialog } from "../components/Dialogs";
+import { Minutes, type MinutesEditing } from "../components/Minutes";
 import { Transcript } from "../components/Transcript";
 import { api } from "../lib/api";
 import { STATUS_LABEL, dateTime, duration, go, timecode, useTick } from "../lib/format";
 import { meetingClock, useMeeting, type MeetingState } from "../lib/useMeeting";
 
-export function LiveBody({ s, emptyMinutes }: { s: MeetingState; emptyMinutes: string }) {
+export interface Editing {
+  onEditUtt: (id: string, text: string) => Promise<void>;
+  onDeleteUtt: (id: string) => Promise<void>;
+  minutes: MinutesEditing;
+}
+
+export function LiveBody({ s, emptyMinutes, editing }: { s: MeetingState; emptyMinutes: string; editing?: Editing }) {
   const [focus, setFocus] = useState<{ id: string; n: number } | null>(null);
   const m = s.minutes;
   return (
     <div className="live">
       <section className="conversation">
         <div className="label">Live conversation <span className="meta">繁中 · 中英混說</span></div>
-        <Transcript utts={s.utts} pauses={s.pauses} focus={focus} />
+        <Transcript utts={s.utts} pauses={s.pauses} focus={focus} onEdit={editing?.onEditUtt} onDelete={editing?.onDeleteUtt}
+          follow={!["ended", "confirmed"].includes(s.meeting?.status ?? "")} />
       </section>
       <aside className="context panel">
         <div className="label">Live minutes <span className="meta">{m ? `v${m.version}${m.reflected_at != null ? ` · 整理於 ${timecode(m.reflected_at)}` : ""}` : ""}</span></div>
         <div className="scroll">
-          <Minutes minutes={m} emptyText={emptyMinutes} onJump={(id) => setFocus({ id, n: (focus?.n ?? 0) + 1 })} />
+          <Minutes minutes={m} emptyText={emptyMinutes} editing={editing?.minutes} onJump={(id) => setFocus({ id, n: (focus?.n ?? 0) + 1 })} />
         </div>
       </aside>
     </div>
@@ -41,7 +48,7 @@ function Stats({ s }: { s: MeetingState }) {
 
 export function MeetingPage({ id }: { id: string }) {
   const s = useMeeting(`/ws/meetings/${id}`);
-  const [dialog, setDialog] = useState<"" | "pair" | "stop" | "confirm" | "delete">("");
+  const [dialog, setDialog] = useState<"" | "pair" | "stop" | "confirm" | "delete" | "edit">("");
   const [confirmDismissed, setConfirmDismissed] = useState(false);
   const [tab, setTab] = useState("minutes");
   const [error, setError] = useState("");
@@ -52,6 +59,17 @@ export function MeetingPage({ id }: { id: string }) {
   useEffect(() => {
     if (m?.status === "ended" && !confirmDismissed) setDialog((d) => d || "confirm");
   }, [m?.status, confirmDismissed]);
+
+  // 手動編輯：改動會透過 WebSocket 推回來，所以這裡只呼叫 API，失敗時丟出錯誤給表單顯示
+  const editing: Editing = useMemo(() => ({
+    onEditUtt: async (uid, text) => { await api.editUtt(id, uid, text); },
+    onDeleteUtt: async (uid) => { await api.deleteUtt(id, uid); },
+    minutes: {
+      onAdd: async (it) => { await api.addItem(id, it); },
+      onEdit: async (itemId, changes) => { await api.editItem(id, itemId, changes); },
+      onDelete: async (itemId) => { await api.deleteItem(id, itemId); },
+    },
+  }), [id]);
 
   const act = async (a: "start" | "pause" | "resume" | "stop") => {
     setError("");
@@ -86,6 +104,7 @@ export function MeetingPage({ id }: { id: string }) {
       <Titlebar>
         <IconButton icon="chevron-left" label="回到會議庫" size="sm" onClick={() => go("/")} />
         <span className="crumb"><b>{m.title}</b>{m.mode === "ephemeral" && <span className="badge info" style={{ marginLeft: 8 }}>Ephemeral</span>}</span>
+        <IconButton icon="settings-2" label="會議資料（名稱、分類、標籤）" size="sm" onClick={() => setDialog("edit")} />
         <div className="spacer" />
         {inMeeting && <Stats s={s} />}
         {m.status === "live" && <Levels levels={s.levels} speakers={speakers} />}
@@ -133,7 +152,7 @@ export function MeetingPage({ id }: { id: string }) {
         </div>
       )}
 
-      {inMeeting && <LiveBody s={s} emptyMinutes={emptyMinutes} />}
+      {inMeeting && <LiveBody s={s} emptyMinutes={emptyMinutes} editing={m.status === "ending" ? undefined : editing} />}
 
       {(m.status === "ended" || m.status === "confirmed") && (
         <div className="detail">
@@ -146,11 +165,12 @@ export function MeetingPage({ id }: { id: string }) {
             <Tabs value={tab} onChange={setTab} items={[{ id: "minutes", label: "會議記錄" }, { id: "both", label: "記錄＋逐字稿" }]} />
           </div>
           {tab === "both"
-            ? <LiveBody s={s} emptyMinutes={emptyMinutes} />
+            ? <LiveBody s={s} emptyMinutes={emptyMinutes} editing={editing} />
             : (
               <div className="panel context" style={{ flex: 1, minHeight: 0 }}>
                 <div className="scroll">
-                  <Minutes minutes={s.minutes} emptyText={m.mode === "ephemeral" ? "Ephemeral 會議只保留確認過的決策與待辦。" : emptyMinutes} onJump={() => setTab("both")} />
+                  <Minutes minutes={s.minutes} emptyText={m.mode === "ephemeral" ? "Ephemeral 會議只保留確認過的決策與待辦。" : emptyMinutes}
+                    editing={editing.minutes} onJump={() => setTab("both")} />
                 </div>
               </div>
             )}
@@ -158,6 +178,7 @@ export function MeetingPage({ id }: { id: string }) {
       )}
 
       {dialog === "pair" && <PairDialog meetingId={id} onClose={() => setDialog("")} />}
+      {dialog === "edit" && <MeetingEditDialog meeting={m} onClose={() => setDialog("")} />}
       {dialog === "stop" && (
         <AskDialog title="結束這場會議？" description="結束後停止收音，並做最後一次整理；接著請你確認決策與待辦。" confirm="結束會議"
           onConfirm={async () => { setDialog(""); await act("stop"); }} onClose={() => setDialog("")} />

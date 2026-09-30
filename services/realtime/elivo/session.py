@@ -53,7 +53,7 @@ class MeetingSession:
         lines = store.utterances(self.id)
         for l in lines:
             self.utts[l["id"]] = {"type": "utt", "id": l["id"], "speaker": l["speaker"], "committed": l["text"],
-                                  "tentative": "", "final": True, "t": l["t"]}
+                                  "tentative": "", "final": True, "t": l["t"], "edited": bool(l["edited"])}
         for sp in {l["speaker"] for l in lines}:
             n = max(int(l["id"].rsplit("-", 1)[1]) for l in lines if l["speaker"] == sp)
             self.counters[sp] = itertools.count(n + 1)
@@ -80,6 +80,10 @@ class MeetingSession:
 
     def _set(self, **fields):
         self.meeting = self.store.update_meeting(self.id, **fields)
+        self.notify()
+
+    def notify(self):
+        """把目前的會議狀態推給所有連線中的畫面（本機與第二螢幕）。"""
         self.broadcast(self.id, {"type": "meeting", "meeting": self.public_meeting(), "clock": self.clock(),
                                  "running": self.resumed_at is not None, "pauses": self.store.pauses(self.id)})
 
@@ -89,6 +93,8 @@ class MeetingSession:
         return m
 
     def snapshot(self) -> dict:
+        # 名稱、分類、標籤可能在別處被改（例如刪除 Space 會把會議改成未分類），以資料庫為準
+        self.meeting = self.store.meeting(self.id) or self.meeting
         return {
             "type": "snapshot",
             "meeting": self.public_meeting(),
@@ -163,7 +169,61 @@ class MeetingSession:
             ]}
             self.store.delete_utterances(self.id)
             self.utts.clear()
+            self.minutes.restore(state, [])   # 之後的編輯只會在精簡後的版本上進行，不會帶回依據與修改紀錄
         self._set(status="confirmed", minutes=state)
+
+    # ---- 手動編輯：會議記錄 ----
+
+    def _require_minutes(self):
+        if not self.minutes:
+            raise SessionError(self.minutes_error or "這場會議沒有會議記錄")
+        if self.status == "ending":
+            raise SessionError("正在做最後整理，請稍候再編輯")
+
+    def add_item(self, kind: str, text: str, owner=None, due=None, value=None) -> dict:
+        self._require_minutes()
+        if kind not in ACTIVE or not (text or "").strip():
+            raise SessionError("請選擇類型並輸入內容")
+        return self.minutes.user_add(kind, text.strip(), owner or None, due or None, value or None).model_dump()
+
+    def edit_item(self, item_id: str, changes: dict):
+        self._require_minutes()
+        if item_id not in self.minutes.items:
+            raise SessionError("找不到這個項目")
+        self.minutes.user_update(item_id, changes)
+
+    def delete_item(self, item_id: str):
+        """刪除＝撤回（保留修改紀錄），AI 之後不會再把它加回來。"""
+        self.edit_item(item_id, {"status": "retracted"})
+
+    # ---- 手動編輯：逐字稿 ----
+
+    def _require_final(self, uid: str) -> dict:
+        u = self.utts.get(uid)
+        if not u or not u["final"]:
+            raise SessionError("找不到這句，或這句還在辨識中")
+        return u
+
+    def edit_utt(self, uid: str, text: str):
+        u = self._require_final(uid)
+        text = (text or "").strip()
+        if not text:
+            raise SessionError("內容不能是空的；要刪除請用刪除")
+        u.update(committed=text, edited=True)
+        if not self.ephemeral:
+            self.store.edit_utterance(self.id, uid, text)
+        if self.minutes:
+            self.minutes.edit_line(uid, text)
+        self.broadcast(self.id, u)
+
+    def delete_utt(self, uid: str):
+        self._require_final(uid)
+        self.utts.pop(uid)
+        if not self.ephemeral:
+            self.store.delete_utterance(self.id, uid)
+        if self.minutes:
+            self.minutes.delete_line(uid)
+        self.broadcast(self.id, {"type": "utt_deleted", "id": uid})
 
     # ---- 擷取 ----
 
@@ -238,7 +298,8 @@ class MeetingSession:
         self.broadcast(self.id, ev)
 
     def _on_minutes(self, ev: dict):
-        if not self.ephemeral and self.status not in ("ended", "confirmed"):
+        # Ephemeral 會議在確認前不寫入；確認後保存的是精簡版（只有決策與待辦）
+        if not self.ephemeral or self.status == "confirmed":
             self.store.update_meeting(self.id, minutes=ev["minutes"])
         self.broadcast(self.id, ev)
 

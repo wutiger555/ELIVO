@@ -45,6 +45,8 @@ function reduce(s: MeetingState, a: Action): MeetingState {
       const utts = i < 0 ? [...s.utts, ev] : s.utts.map((u, j) => (j === i ? ev : u));
       return { ...s, utts };
     }
+    case "utt_deleted":
+      return { ...s, utts: s.utts.filter((u) => u.id !== ev.id) };
     case "minutes":
       return { ...s, minutes: ev.minutes };
     case "stats":

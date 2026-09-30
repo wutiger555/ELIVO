@@ -227,7 +227,9 @@ textarea.field:focus { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 0 0
 /* ---- 會議畫面 ---- */
 .live { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 12px; padding: 12px; }
 .conversation { position: relative; min-height: 0; display: flex; flex-direction: column; padding: 20px 20px 0 28px; }
+.conversation > .scroll { -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 28px); mask-image: linear-gradient(to bottom, transparent 0, #000 28px); }
 .transcript { padding: 16px 8px 40vh 0; }
+.transcript.static { padding-bottom: 24px; }
 .utt { display: grid; grid-template-columns: var(--gutter) minmax(0, 1fr); gap: 16px; padding: 10px 0; border-radius: var(--radius-sm); animation: elivo-surface var(--dur-surface) var(--ease-out); }
 .gutter { display: flex; flex-direction: column; gap: 6px; padding-top: 7px; }
 .who { font: 500 12.5px/1 var(--font-sans); color: var(--text-2); }
@@ -250,6 +252,11 @@ textarea.field:focus { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 0 0
 .rewrite { animation: rewrite var(--dur-slow) var(--ease-out); }
 @keyframes rewrite { from { opacity: .35; filter: blur(3px); } to { opacity: 1; filter: none; } }
 .utt.flash { animation: flash 1.6s var(--ease-out); }
+/* 滑過定稿的句子才出現編輯按鈕；鍵盤聚焦時也顯示 */
+.utt-actions { display: inline-flex; gap: 2px; margin-left: 8px; vertical-align: middle; opacity: 0; transition: opacity var(--dur-fast) var(--ease-out); }
+.utt:hover .utt-actions, .utt-actions:focus-within { opacity: 1; }
+.utt-editor { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.utt-editor textarea.field { min-height: 64px; font-size: var(--history-size); }
 @keyframes flash { 0%, 40% { background: var(--accent-soft); } 100% { background: transparent; } }
 .pause-mark { display: flex; align-items: center; gap: 10px; margin: 8px 0 8px var(--gutter); padding-left: 16px; font: 400 12px/1 var(--font-mono); color: var(--text-4); }
 .pause-mark::before, .pause-mark::after { content: ""; flex: 1; height: 1px; background: var(--border); }
@@ -309,6 +316,9 @@ textarea.field:focus { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 0 0
 .evidence { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .tc-chip { height: 22px; padding: 0 8px; border: 0; border-radius: var(--radius-pill); background: var(--surface-hover); color: var(--text-3); font: 500 11px/22px var(--font-mono); cursor: pointer; }
 .tc-chip:hover { color: var(--accent-text); background: var(--accent-soft); }
+.item-actions { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.item-form { display: flex; flex-direction: column; gap: 10px; cursor: default; }
+.two > * { min-width: 0; }   /* 窄欄位（例如右側記錄面板）裡的兩欄輸入框不要超出邊界 */
 .history { margin: 12px 0 0; padding: 12px 0 0; list-style: none; border-top: 1px solid var(--border); }
 .history li { display: grid; grid-template-columns: 58px 1fr; gap: 8px; padding: 3px 0; font: 400 12.5px/1.55 var(--font-sans); color: var(--text-3); }
 .history .when { font: 400 11px/1.9 var(--font-mono); color: var(--text-4); }

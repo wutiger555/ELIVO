@@ -5,7 +5,7 @@ ELIVO（意聯）是一個即時對談智慧產品：不用 bot 的 Mac app，�
 專案目前在 Phase 0（驗證期）：repo 裡只有規劃文件，還沒有程式碼。
 
 **目前進度**：ASR spike 已完成（`spikes/asr-realtime/RESULTS.md`、ADR-0006 草案）。產品原型在 `services/realtime/`（Python）與 `apps/web/`（React），啟動方式見 README。
-**下一步**：階段 ③b（記錄與逐字稿的手動編輯、會議改名／移動／標籤）→ ④「前面說過」提示與出卡頻率控制 → ⑤ 跨會議 Decision Ledger；另待研究說話者分辨（diarization，須符合 ADR-0003）。
+**下一步**：④「前面說過」提示與出卡頻率控制 → ⑤ 跨會議 Decision Ledger；另待研究說話者分辨（diarization，須符合 ADR-0003），以及產品發佈與商業模式（模型下載、LLM 金鑰、訂閱）。
 
 ## 文件位置
 - `docs/01-research-report.md`：全盤調查與最終判斷。要改變產品方向前先讀這份。

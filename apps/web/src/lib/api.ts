@@ -26,7 +26,7 @@ export interface Meeting {
   minutes_error?: string | null;
 }
 
-export interface Utt { type: "utt"; id: string; speaker: string; committed: string; tentative: string; final: boolean; t: number }
+export interface Utt { type: "utt"; id: string; speaker: string; committed: string; tentative: string; final: boolean; t: number; edited?: boolean }
 export interface Revision { t: number; by: "fast" | "reflect" | "user"; change: string; utt_ids: string[] }
 export interface Item {
   id: string; kind: Kind; text: string; status: string;
@@ -65,8 +65,11 @@ export const api = {
   devices: () => call<Devices>("GET", "/api/devices"),
   spaces: () => call<Space[]>("GET", "/api/spaces"),
   createSpace: (name: string) => call<Space>("POST", "/api/spaces", { name }),
+  updateSpace: (id: string, f: { name?: string; glossary?: string }) => call<Space>("PATCH", `/api/spaces/${id}`, f),
   deleteSpace: (id: string) => call("DELETE", `/api/spaces/${id}`),
   createSeries: (spaceId: string, name: string) => call<Series>("POST", `/api/spaces/${spaceId}/series`, { name }),
+  updateSeries: (id: string, name: string) => call<Series>("PATCH", `/api/series/${id}`, { name }),
+  deleteSeries: (id: string) => call("DELETE", `/api/series/${id}`),
   brief: (seriesId: string) => call<{ meeting: { id: string; title: string; started_at: number } | null; items: Item[] }>("GET", `/api/series/${seriesId}/brief`),
   tags: () => call<{ tag: string; n: number }[]>("GET", "/api/tags"),
   meetings: (q: { space_id?: string; series_id?: string; tag?: string; q?: string }) => {
@@ -75,7 +78,13 @@ export const api = {
   },
   createMeeting: (m: Partial<Meeting>) => call<Meeting>("POST", "/api/meetings", m),
   meeting: (id: string) => call<Snapshot>("GET", `/api/meetings/${id}`),
+  updateMeeting: (id: string, f: Partial<Pick<Meeting, "title" | "space_id" | "series_id" | "tags">>) => call<Meeting>("PATCH", `/api/meetings/${id}`, f),
   deleteMeeting: (id: string) => call("DELETE", `/api/meetings/${id}`),
+  addItem: (id: string, it: Partial<Item>) => call<Item>("POST", `/api/meetings/${id}/items`, it),
+  editItem: (id: string, itemId: string, f: Partial<Item>) => call<Item>("PATCH", `/api/meetings/${id}/items/${itemId}`, f),
+  deleteItem: (id: string, itemId: string) => call("DELETE", `/api/meetings/${id}/items/${itemId}`),
+  editUtt: (id: string, uid: string, text: string) => call("PATCH", `/api/meetings/${id}/utterances/${encodeURIComponent(uid)}`, { text }),
+  deleteUtt: (id: string, uid: string) => call("DELETE", `/api/meetings/${id}/utterances/${encodeURIComponent(uid)}`),
   action: (id: string, action: "start" | "pause" | "resume" | "stop") => call<Meeting>("POST", `/api/meetings/${id}/${action}`),
   confirm: (id: string, keep: string[], edits: Record<string, Partial<Item>>) => call<Snapshot>("POST", `/api/meetings/${id}/confirm`, { keep, edits }),
   exportMd: (id: string) => call<string>("GET", `/api/meetings/${id}/export.md`),

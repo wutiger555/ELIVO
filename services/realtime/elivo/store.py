@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS utterances (
   t REAL NOT NULL,
   text TEXT NOT NULL,
   deleted INTEGER NOT NULL DEFAULT 0,
+  edited INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (meeting_id, id)
 );
 CREATE TABLE IF NOT EXISTS pauses (
@@ -81,7 +82,14 @@ class Store:
         self.db.execute("PRAGMA journal_mode=WAL")    # 當機時已寫入的資料不會損毀
         self.db.execute("PRAGMA foreign_keys=ON")
         self.db.executescript(SCHEMA)
+        self._migrate()
         self.lock = threading.Lock()
+
+    def _migrate(self):
+        """舊版資料庫補上後來新增的欄位。"""
+        cols = {r[1] for r in self.db.execute("PRAGMA table_info(utterances)")}
+        if "edited" not in cols:
+            self.db.execute("ALTER TABLE utterances ADD COLUMN edited INTEGER NOT NULL DEFAULT 0")
 
     def _q(self, sql, args=()):
         with self.lock:
@@ -227,8 +235,15 @@ class Store:
             (meeting_id, uid, speaker, t, text),
         )
 
+    def edit_utterance(self, meeting_id: str, uid: str, text: str):
+        self._x("UPDATE utterances SET text=?, edited=1 WHERE meeting_id=? AND id=?", (text, meeting_id, uid))
+
+    def delete_utterance(self, meeting_id: str, uid: str):
+        """真的刪掉（不是隱藏）：使用者要求刪除的內容不留在資料庫。"""
+        self._x("DELETE FROM utterances WHERE meeting_id=? AND id=?", (meeting_id, uid))
+
     def utterances(self, meeting_id: str, include_deleted=False) -> list[dict]:
-        sql = "SELECT id, speaker, t, text, deleted FROM utterances WHERE meeting_id=?"
+        sql = "SELECT id, speaker, t, text, deleted, edited FROM utterances WHERE meeting_id=?"
         if not include_deleted:
             sql += " AND deleted=0"
         return [dict(r) for r in self._q(sql + " ORDER BY t, rowid", (meeting_id,))]
