@@ -16,14 +16,14 @@ const GROUPS: { kind: Kind; label: string; icon: string; tone: string }[] = [
   { kind: "number", label: "NUMBERS", icon: "hash", tone: "number" },
 ];
 export const ACTIVE: Record<Kind, string> = { decision: "confirmed", action: "open", question: "open", number: "current" };
-const STATUS: Record<string, [string, string]> = {
+export const STATUS: Record<string, [string, string]> = {
   superseded: ["已被取代", "warn"], reversed: ["已撤銷", "warn"], answered: ["已回答", "info"], deferred: ["延後", ""],
   done: ["完成", "accent"], cancelled: ["取消", ""],
 };
-const STRUCK = ["superseded", "reversed", "cancelled"];
+export const STRUCK = ["superseded", "reversed", "cancelled"];
 const BY = { fast: "即時", reflect: "整理", user: "手動" };
-const KIND_ZH: Record<Kind, string> = { decision: "決策", action: "待辦", question: "問題", number: "數字" };
-const STATUS_OPTIONS: Record<Kind, [string, string][]> = {
+export const KIND_ZH: Record<Kind, string> = { decision: "決策", action: "待辦", question: "問題", number: "數字" };
+export const STATUS_OPTIONS: Record<Kind, [string, string][]> = {
   decision: [["confirmed", "確認"], ["superseded", "已被取代"], ["reversed", "已撤銷"]],
   action: [["open", "進行中"], ["done", "完成"], ["cancelled", "取消"]],
   question: [["open", "未答"], ["answered", "已回答"], ["deferred", "延後"]],

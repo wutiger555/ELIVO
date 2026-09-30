@@ -7,10 +7,9 @@ import { Select } from "@design/components/forms/Select.jsx";
 import { Switch } from "@design/components/forms/Switch.jsx";
 import { SegmentedControl } from "@design/components/forms/SegmentedControl.jsx";
 import { Titlebar } from "../components/Chrome";
-import { api, wsUrl, type Devices, type Item, type Space } from "../lib/api";
+import { api, wsUrl, type Devices, type Item, type LedgerMeeting, type Space } from "../lib/api";
 import { dateTime, go } from "../lib/format";
-
-const NOTICE = "本場會議使用 ELIVO 在本機產生逐字稿與會議記錄，僅供整理會議內容。不做情緒分析、不建立聲紋。如果不希望被記錄，請隨時告訴我，我會暫停或刪除。";
+import { NOTICE, saveSources } from "../lib/quick";
 const KIND = { decision: "上次決策", action: "未完成待辦", question: "未答問題", number: "數字" };
 
 /** 會前音量測試：選好的裝置即時顯示音量，確認真的收得到聲音。 */
@@ -39,7 +38,7 @@ export function NewMeeting({ query }: { query: URLSearchParams }) {
   const [keepAudio, setKeepAudio] = useState(false);
   const [aiPolicy, setAiPolicy] = useState<"economy" | "quality">("economy");
   const [glossary, setGlossary] = useState<string | null>(null);   // null＝沿用 Space 的術語表
-  const [brief, setBrief] = useState<{ meeting: { title: string; started_at: number } | null; items: Item[] } | null>(null);
+  const [brief, setBrief] = useState<{ meeting: { title: string; started_at: number } | null; items: (Item & { from?: LedgerMeeting })[] } | null>(null);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -81,6 +80,7 @@ export function NewMeeting({ query }: { query: URLSearchParams }) {
     if (!sources.length) { setError("至少要開啟一個音源"); return; }
     setBusy(true);
     setError("");
+    saveSources(sources);   // 下次「開始錄音」沿用
     try {
       const m = await api.createMeeting({
         title: title.trim(), space_id: spaceId || null, series_id: seriesId || null, mode, ai_policy: aiPolicy,
@@ -199,6 +199,7 @@ export function NewMeeting({ query }: { query: URLSearchParams }) {
                     {it.kind === "number" && it.value ? `${it.value}　${it.text}` : it.text}
                     {it.owner && <span className="muted"> · 負責 {it.owner}</span>}
                     {it.due && <span className="muted"> · {it.due}</span>}
+                    {it.from && <span className="muted"> · 來自 {it.from.title}</span>}
                   </div>
                 ))}
               </>

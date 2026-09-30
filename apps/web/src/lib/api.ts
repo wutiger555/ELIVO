@@ -34,10 +34,26 @@ export interface Item {
   owner: string | null; due: string | null; value: string | null; answer: string | null; superseded_by: string | null;
   utt_ids: string[]; history: Revision[];
 }
+export interface LedgerMeeting { id: string; title: string; series_id: string | null; started_at: number }
+/** 帳本項目：某場確認過的會議裡的一個會議記錄項目。 */
+export interface LedgerItem {
+  key: string; id: string; kind: Kind; text: string; status: string;
+  owner: string | null; due: string | null; value: string | null; answer: string | null; superseded_by: string | null;
+  meeting: LedgerMeeting; jump: string | null; quote: string | null;
+}
 export interface Minutes { version: number; reflected_at: number | null; summary: { topic: string; points: string[] }[]; items: Item[]; utt_t: Record<string, number> }
+export type HintType = "recall" | "previous" | "number_drift" | "conflict" | "open_question" | "unowned_action";
+/** 主動提示卡片（見 services/realtime/elivo/surfacing.py）。promoted 醒目顯示，ambient 安靜列出。 */
 export interface Hint {
-  id: string; t: number; trigger: string; target: string; target_t: number; jump: string | null; matched: string[]; score: number;
-  meta: { id?: string; kind?: Kind; text?: string; status?: string; value?: string | null; answer?: string | null; superseded_by?: string | null; speaker?: string };
+  id: string; type: HintType; level: "ambient" | "promoted";
+  t: number; trigger: string | null; target: string; target_t: number; jump: string | null; matched: string[]; score: number;
+  meta: {
+    id?: string; kind?: Kind; text?: string; status?: string; value?: string | null; answer?: string | null; superseded_by?: string | null;
+    speaker?: string; owner?: string | null; quote?: string | null; jump?: string | null;   // previous：那場會議裡的句子
+    meeting?: LedgerMeeting;      // previous：來自哪一場
+    old?: LedgerItem;             // number_drift／conflict：帳本裡的舊項目
+    change?: string; note?: string;
+  };
 }
 export interface Stats { utterances: number; first_p50: number | null; final_p50: number | null; infer_p50: number | null; llm_calls?: number }
 export interface Snapshot {
@@ -75,7 +91,11 @@ export const api = {
   createSeries: (spaceId: string, name: string) => call<Series>("POST", `/api/spaces/${spaceId}/series`, { name }),
   updateSeries: (id: string, name: string) => call<Series>("PATCH", `/api/series/${id}`, { name }),
   deleteSeries: (id: string) => call("DELETE", `/api/series/${id}`),
-  brief: (seriesId: string) => call<{ meeting: { id: string; title: string; started_at: number } | null; items: Item[] }>("GET", `/api/series/${seriesId}/brief`),
+  brief: (seriesId: string) => call<{ meeting: { id: string; title: string; started_at: number } | null; items: (Item & { from?: LedgerMeeting })[] }>("GET", `/api/series/${seriesId}/brief`),
+  ledger: (spaceId: string, q: { q?: string; kind?: string; active?: boolean }) => {
+    const params = new URLSearchParams(Object.entries(q).filter(([, v]) => v).map(([k, v]) => [k, String(v)]));
+    return call<LedgerItem[]>("GET", `/api/spaces/${spaceId}/ledger?${params}`);
+  },
   tags: () => call<{ tag: string; n: number }[]>("GET", "/api/tags"),
   meetings: (q: { space_id?: string; series_id?: string; tag?: string; q?: string }) => {
     const params = new URLSearchParams(Object.entries(q).filter(([, v]) => v) as [string, string][]);

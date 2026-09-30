@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 from .asr.whisper_server import WhisperServer
 from .capture import Source, list_devices, rms, start_source
+from .recall import bm25, tokens
 from .config import AUDIO_DIR, DB_PATH, SPOOL_DIR, WEB_DIST
 from .session import ACTIVE, SessionError, SessionManager
 from .store import Store
@@ -188,6 +189,24 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
         st().delete_space(space_id)
         return {"ok": True}
 
+    @app.get("/api/spaces/{space_id}/ledger")
+    def ledger(space_id: str, q: str | None = None, kind: str | None = None, active: bool = False):
+        """決策帳本：這個 Space 所有確認過的決策、待辦、問題、數字。q：關鍵字搜尋（「什麼時候決定 X？」）。"""
+        if st().space(space_id) is None:
+            raise HTTPException(404, "找不到這個 Space")
+        items = [it for it in st().ledger(space_id)
+                 if (not kind or it["kind"] == kind) and (not active or it["status"] == ACTIVE[it["kind"]])]
+        q = (q or "").strip()
+        if q:
+            texts = [" ".join(filter(None, [it["text"], it["value"], it["answer"], it["owner"], it["quote"]])) for it in items]
+            qt = tokens(q)
+            if qt:
+                # 帳本是時間軸：只篩出相符的項目，順序維持新的在前
+                items = [it for (sc, _), it in zip(bm25(qt, texts), items) if sc > 0]
+            else:   # 單一個字之類斷不出詞的查詢：直接比對字串
+                items = [it for it, t in zip(items, texts) if q.lower() in t.lower()]
+        return items
+
     class SeriesIn(BaseModel):
         name: str
 
@@ -213,7 +232,11 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
         if not last or not last.get("minutes"):
             return {"meeting": None, "items": []}
         items = [it for it in last["minutes"]["items"] if it["status"] == ACTIVE[it["kind"]]]
-        return {"meeting": {k: last[k] for k in ("id", "title", "started_at")}, "items": items}
+        # 更早的場次還沒完成的待辦、還沒回答的問題也要帶上（帳本裡確認過的）
+        since = last["started_at"] or last["created_at"]
+        older = [{**it, "from": it["meeting"]} for it in st().ledger(series_id=series_id)
+                 if it["meeting"]["started_at"] < since and it["kind"] in ("action", "question") and it["status"] == "open"]
+        return {"meeting": {k: last[k] for k in ("id", "title", "started_at")}, "items": items + older}
 
     @app.get("/api/tags")
     def tags():

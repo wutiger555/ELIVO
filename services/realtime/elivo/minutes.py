@@ -147,6 +147,20 @@ class Reflection(BaseModel):
     corrections: list[Correction]
 
 
+class Change(BaseModel):
+    relation: Literal["same", "changed", "unrelated"]
+    note: str = ""
+
+
+CHANGE_SYSTEM = """你比對兩個會議決策：一個是先前會議確認過的，一個是這場會議剛做的。判斷新決策和舊決策的關係：
+- same：同一件事，內容相同或只是補充細節
+- changed：同一件事，但內容不同（改變、取代、推翻）
+- unrelated：講的不是同一件事
+note：changed 時用 20 字以內寫出差異（例如「CMS 由 WordPress 改為 Strapi」），只陳述事實，不評論；其他情況給空字串。
+不判斷任何人的情緒或態度。"""
+CHANGE_FORMAT = '格式：{"relation": "same|changed|unrelated", "note": "…"}'
+
+
 COMMON_RULES = """規則：
 - 只根據逐字稿，不要推測，也不要補充外部知識；語音辨識的錯字若無法確定原意，照原文保留。
 - 不判斷任何人的情緒、態度、語氣或參與度。
@@ -292,6 +306,14 @@ class MinutesEngine:
         """會議結束：把剩下的句子跑完 fast，再整體整理一次。"""
         await self.fast()
         await self.reflect(force=True)
+
+    async def judge_change(self, old: str, new: str) -> Change | None:
+        """主動提示用：新決策是否改變了帳本裡的舊決策（本機比對出相近的才會呼叫，很少發生）。"""
+        if not self.enabled:
+            return None
+        out = await self._call("judge", self.fast_model, CHANGE_SYSTEM, f"先前的決策：{old}\n這場的決策：{new}",
+                               Change, 300, 0, format_hint=CHANGE_FORMAT)
+        return out if isinstance(out, Change) else None
 
     # ---- fast ----
 

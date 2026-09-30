@@ -7,7 +7,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from elivo.asr.whisper_server import Result  # noqa: E402
-from elivo.minutes import OpBatch, Reflection  # noqa: E402
+from elivo.minutes import Change, OpBatch, Reflection  # noqa: E402
 
 SMOKE = Path("~/ELIVO-data/eval/datasets/synthetic/smoke.wav").expanduser()
 
@@ -28,6 +28,8 @@ class FakeLLM:
 
     async def complete_json(self, model, system, prompt, schema, max_tokens=8192, format_hint=None):
         self.calls.append(schema.__name__)
+        if schema is Change:
+            return Change(relation="changed", note="測試：內容不同"), {}
         if schema is OpBatch:
             return OpBatch.model_validate({"ops": [{"op": "add", "kind": "decision", "text": "下禮拜三跟 client 開會", "reason": "測試", "utt_ids": []}]}), {}
         # 真正的 reflect 會列出所有項目（沒列出的會被撤回），這裡原樣回傳 prompt 裡的目前記錄

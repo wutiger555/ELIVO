@@ -1,6 +1,7 @@
 """「前面說過」提示：不用 LLM，在本機用關鍵字檢索找出與當下這句相關的先前內容。
 
 - 文件：會議記錄項目（決策、數字、問題、待辦，含依據句子的文字）；沒有會議記錄時退回用先前的逐字稿句子。
+  另外加上同一個 Space 帳本裡確認過的有效項目（先前會議的決策等），命中時提示類型是 previous。
 - 斷詞：中文取相鄰兩字（去掉「我們」「這個」這類常見詞），英文與數字取整個詞，術語表的詞加權。
 - 分數：BM25。只在「定稿的句子」（說話告一段落）時檢查，符合條件才出提示。
 - 出提示的條件（surfacing policy 的簡化版，見 03-technical-architecture §4.7）：
@@ -14,6 +15,8 @@ import re
 import unicodedata
 from collections import Counter
 from dataclasses import dataclass, field
+
+from .minutes import STATUSES
 
 CJK = r"㐀-䶿一-鿿"
 _TOKEN = re.compile(rf"[{CJK}]+|[a-z0-9]+")
@@ -39,6 +42,28 @@ def tokens(text: str) -> list[str]:
     return out
 
 
+def bm25(q: list[str], texts: list[str], glossary: set[str] = frozenset()) -> list[tuple[float, list[str]]]:
+    """每份文件對查詢詞的 BM25 分數與相符的詞。"""
+    if not texts:
+        return []
+    toks = [tokens(t) for t in texts]
+    n, avgdl = len(texts), sum(map(len, toks)) / len(texts) or 1
+    df = Counter(tok for ts in toks for tok in set(ts))
+    qset = set(q)
+    out = []
+    for ts in toks:
+        tf = Counter(ts)
+        matched = [tok for tok in qset if tf[tok]]
+        score = 0.0
+        for tok in matched:
+            # 下限 1.0：會議剛開始、可比對的內容很少時，BM25 的 idf 會小到任何相符都過不了門檻
+            idf = max(1.0, math.log(1 + (n - df[tok] + 0.5) / (df[tok] + 0.5)))
+            w = 3.0 if tok in glossary else 1.0
+            score += w * idf * tf[tok] * 2.2 / (tf[tok] + 1.2 * (0.25 + 0.75 * len(ts) / avgdl))
+        out.append((score, matched))
+    return out
+
+
 @dataclass
 class Doc:
     key: str               # "item:D2" 或 "utt:我-5"
@@ -55,6 +80,7 @@ class Recall:
         self.min_age, self.min_gap, self.repeat_after, self.threshold = min_age, min_gap, repeat_after, threshold
         self.utts: list[dict] = []
         self.items: list[dict] = []
+        self.ledger: list[dict] = []          # 帳本（store.ledger 的項目）：先前會議確認過的內容
         self.utt_t: dict[str, float] = {}
         self.last_hint_at = -1e9
         self.shown: dict[str, float] = {}    # 目標 key → 上次提示時間
@@ -65,6 +91,9 @@ class Recall:
     def set_items(self, items: list[dict], utt_t: dict[str, float]):
         self.items = [it for it in items if it["status"] != "retracted"]
         self.utt_t.update(utt_t)
+
+    def set_ledger(self, entries: list[dict]):
+        self.ledger = [e for e in entries if e["status"] == STATUSES[e["kind"]][0]]   # 只用還有效的項目
 
     def add_utt(self, uid: str, speaker: str, text: str, t: float) -> dict | None:
         """一句定稿：先檢查要不要出提示，再把這句加入索引。"""
@@ -99,6 +128,11 @@ class Recall:
         if not docs:   # 沒有會議記錄時（例如沒有 LLM 金鑰）退回用逐字稿
             docs = [Doc(f"utt:{u['id']}", u["text"], u["t"], u["id"], {"speaker": u["speaker"], "text": u["text"]})
                     for u in self.utts if now - u["t"] >= self.min_age]
+        for e in self.ledger:
+            text = " ".join(filter(None, [e["text"], e.get("value"), e.get("answer"), e.get("quote")]))
+            docs.append(Doc(f"ledger:{e['key']}", text, -1.0, None,
+                            {**{k: e.get(k) for k in ("id", "kind", "text", "status", "value", "answer", "owner", "due", "quote", "jump")},
+                             "meeting": e["meeting"]}))
         return docs
 
     def _check(self, uid: str, text: str, now: float) -> dict | None:
@@ -110,24 +144,10 @@ class Recall:
         docs = self._docs(now)
         if not docs:
             return None
-        toks = [tokens(d.text) for d in docs]
-        n, avgdl = len(docs), sum(map(len, toks)) / len(docs) or 1
-        df = Counter(tok for ts in toks for tok in set(ts))
-        qset = set(q)
         best = None
-        for d, ts in zip(docs, toks):
-            if now - self.shown.get(d.key, -1e9) < self.repeat_after:
+        for d, (score, matched) in zip(docs, bm25(q, [d.text for d in docs], self.glossary)):
+            if now - self.shown.get(d.key, -1e9) < self.repeat_after or len(matched) < 2:
                 continue
-            tf = Counter(ts)
-            matched = [tok for tok in qset if tf[tok]]
-            if len(matched) < 2:
-                continue
-            score = 0.0
-            for tok in matched:
-                # 下限 1.0：會議剛開始、可比對的內容很少時，BM25 的 idf 會小到任何相符都過不了門檻
-                idf = max(1.0, math.log(1 + (n - df[tok] + 0.5) / (df[tok] + 0.5)))
-                w = 3.0 if tok in self.glossary else 1.0
-                score += w * idf * tf[tok] * 2.2 / (tf[tok] + 1.2 * (0.25 + 0.75 * len(ts) / avgdl))
             if best is None or score > best[0]:
                 best = (score, d, matched)
         if best is None:
@@ -137,7 +157,8 @@ class Recall:
             return None
         self.last_hint_at = now
         self.shown[d.key] = now
-        hint = {"id": f"H{len(self.hints) + 1}", "t": now, "trigger": uid, "target": d.key, "target_t": d.t,
+        hint = {"id": f"H{len(self.hints) + 1}", "type": "previous" if d.key.startswith("ledger:") else "recall",
+                "t": now, "trigger": uid, "target": d.key, "target_t": d.t,
                 "jump": d.utt_id, "matched": sorted(matched), "score": round(score, 2), "meta": d.meta}
         self.hints.append(hint)
         return hint

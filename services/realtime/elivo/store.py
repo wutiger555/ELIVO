@@ -231,6 +231,33 @@ class Store:
         )
         return self._meeting_row(rows[0]) if rows else None
 
+    def ledger(self, space_id: str | None = None, series_id: str | None = None, exclude: str | None = None) -> list[dict]:
+        """決策帳本：Space（或例行會議）裡「會後確認過」的會議記錄項目，新的會議在前。
+
+        項目本身仍存在各場會議的 minutes 裡（只有一份資料），這裡只是彙整；撤回的項目不列入。
+        每個項目附上所屬會議與最後一句依據（quote／jump）。
+        """
+        col, val = ("series_id", series_id) if series_id else ("space_id", space_id)
+        rows = self._q(
+            f"SELECT id, title, series_id, started_at, created_at, minutes FROM meetings"
+            f" WHERE {col}=? AND status='confirmed' AND minutes IS NOT NULL AND id != ?"
+            " ORDER BY COALESCE(started_at, created_at) DESC",
+            (val, exclude or ""),
+        )
+        out = []
+        for r in rows:
+            minutes = json.loads(r["minutes"])
+            text = {u["id"]: u["text"] for u in self.utterances(r["id"])}
+            meeting = {"id": r["id"], "title": r["title"], "series_id": r["series_id"], "started_at": r["started_at"] or r["created_at"]}
+            for it in minutes.get("items", []):
+                if it["status"] == "retracted":
+                    continue
+                ids = [u for u in it.get("utt_ids", []) if u in text]
+                out.append({**{k: it.get(k) for k in ("id", "kind", "text", "status", "owner", "due", "value", "answer", "superseded_by")},
+                            "key": f"{r['id']}:{it['id']}", "meeting": meeting,
+                            "jump": ids[-1] if ids else None, "quote": text[ids[-1]] if ids else None})
+        return out
+
     # ---- 逐字稿與暫停 ----
 
     def upsert_utterance(self, meeting_id: str, uid: str, speaker: str, t: float, text: str):

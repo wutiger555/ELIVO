@@ -3,10 +3,13 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@design/components/core/Button.jsx";
 import { Icon } from "@design/components/core/Icon.jsx";
 import { Input } from "@design/components/forms/Input.jsx";
+import { Tabs } from "@design/components/navigation/Tabs.jsx";
 import { Titlebar } from "../components/Chrome";
 import { GroupSettingsDialog } from "../components/Dialogs";
+import { Ledger } from "../components/Ledger";
 import { api, type AppStatus, type Meeting, type Space } from "../lib/api";
 import { STATUS_LABEL, dateTime, duration, go } from "../lib/format";
+import { quickRecord } from "../lib/quick";
 
 type Filter = { space_id?: string; series_id?: string; tag?: string };
 
@@ -35,7 +38,10 @@ export function Library() {
   const [q, setQ] = useState("");
   const [addSeries, setAddSeries] = useState<string | null>(null);
   const [settings, setSettings] = useState(false);
+  const [view, setView] = useState("meetings");   // 選了 Space 時：會議清單／帳本
   const [error, setError] = useState("");
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState("");
 
   const [listVersion, setListVersion] = useState(0);
   const reload = useCallback(() => {
@@ -55,13 +61,20 @@ export function Library() {
   const heading = filter.series_id ? seriesName(filter.series_id) : filter.space_id ? spaceName(filter.space_id) : filter.tag ? `#${filter.tag}` : "全部會議";
   const newHref = `/new?${new URLSearchParams(Object.entries({ space: filter.space_id ?? "", series: filter.series_id ?? "" }).filter(([, v]) => v))}`;
   const is = (f: Filter) => JSON.stringify(f) === JSON.stringify(filter);
+  const ledger = view === "ledger" && !!filter.space_id;
 
   return (
     <div className="app">
       <Titlebar>
         <div className="spacer" />
         <Input size="sm" icon="search" placeholder="搜尋標題或逐字稿" value={q} onChange={(e) => setQ(e.target.value)} style={{ width: 280 }} />
-        <Button variant="primary" icon="plus" onClick={() => go(newHref)}>新會議</Button>
+        <Button icon="settings-2" onClick={() => go(newHref)}>設定後開始</Button>
+        <Button variant="primary" icon="circle-dot" disabled={starting || !!status?.capturing} onClick={async () => {
+          setStarting(true);
+          const sr = spaces.flatMap((x) => x.series).find((x) => x.id === filter.series_id);
+          const sp = spaces.find((x) => x.id === (filter.space_id ?? sr?.space_id));
+          try { go(`/m/${await quickRecord(sp, sr?.id)}`); } catch (e: any) { setStartError(e.message); setStarting(false); }
+        }}>開始錄音</Button>
       </Titlebar>
       <div className="library">
         <nav className="sidebar panel">
@@ -106,6 +119,13 @@ export function Library() {
         </nav>
         <main className="main-col">
           {error && <div className="banner"><Icon name="triangle-alert" size={16} />無法連線到 ELIVO 服務（{error}）。請確認已執行 <code>python -m elivo</code>。</div>}
+          {startError && <div className="banner"><Icon name="triangle-alert" size={16} />無法開始錄音：{startError}</div>}
+          {status?.capturing && (
+            <div className="banner" style={{ background: "var(--info-soft)" }}>
+              <Icon name="circle-dot" size={16} /><span style={{ flex: 1 }}>有一場會議正在收音。</span>
+              <Button size="sm" onClick={() => go(`/m/${status.capturing}`)}>回到會議</Button>
+            </div>
+          )}
           {status?.interrupted.map((m) => (
             <div className="banner" key={m.id}>
               <Icon name="triangle-alert" size={16} />
@@ -115,15 +135,19 @@ export function Library() {
           ))}
           <div className="list-head">
             <h1>{heading}</h1>
-            <span className="muted">{meetings ? `${meetings.length} 場` : ""}</span>
+            {!ledger && <span className="muted">{meetings ? `${meetings.length} 場` : ""}</span>}
+            {filter.space_id && (
+              <Tabs value={view} onChange={setView} items={[{ id: "meetings", label: "會議" }, { id: "ledger", label: "帳本" }]} />
+            )}
             {(filter.space_id || filter.series_id) && (
               <Button size="sm" variant="ghost" icon="settings-2" onClick={() => setSettings(true)} style={{ marginLeft: "auto" }}>設定</Button>
             )}
           </div>
+          {ledger ? <Ledger spaceId={filter.space_id!} /> : (
           <div className="scroll">
             <div className="meetings">
               {meetings?.length === 0 && (
-                <div className="empty-state">{q ? `找不到含有「${q}」的會議。` : "這裡還沒有會議。按「新會議」開始第一場。"}</div>
+                <div className="empty-state">{q ? `找不到含有「${q}」的會議。` : "這裡還沒有會議。按「開始錄音」就會開始；名稱與分類可以錄完再補。"}</div>
               )}
               {meetings?.map((m) => (
                 <button key={m.id} className="meeting-row" onClick={() => go(`/m/${m.id}`)}>
@@ -143,6 +167,7 @@ export function Library() {
               ))}
             </div>
           </div>
+          )}
         </main>
       </div>
       {settings && filter.space_id && (() => {

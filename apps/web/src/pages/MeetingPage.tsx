@@ -12,6 +12,7 @@ import { Minutes, type MinutesEditing } from "../components/Minutes";
 import { Transcript } from "../components/Transcript";
 import { api } from "../lib/api";
 import { STATUS_LABEL, dateTime, duration, go, timecode, useTick } from "../lib/format";
+import { NOTICE, untitled } from "../lib/quick";
 import { meetingClock, useMeeting, type MeetingState } from "../lib/useMeeting";
 
 export interface Editing {
@@ -20,8 +21,13 @@ export interface Editing {
   minutes: MinutesEditing;
 }
 
-export function LiveBody({ s, emptyMinutes, editing }: { s: MeetingState; emptyMinutes: string; editing?: Editing }) {
+export function LiveBody({ s, emptyMinutes, editing, at }: { s: MeetingState; emptyMinutes: string; editing?: Editing; at?: string | null }) {
   const [focus, setFocus] = useState<{ id: string; n: number } | null>(null);
+  // 從帳本點進來（#/m/:id?at=句子id）：逐字稿載入後跳到那一句
+  const [pending, setPending] = useState(at);
+  useEffect(() => {
+    if (pending && s.utts.some((u) => u.id === pending)) { setFocus({ id: pending, n: 1 }); setPending(null); }
+  }, [pending, s.utts]);
   const m = s.minutes;
   return (
     <div className="live">
@@ -48,11 +54,12 @@ function Stats({ s }: { s: MeetingState }) {
   return <div className="stats">首字 <b>{f(st.first_p50)}</b> · 定稿 <b>{f(st.final_p50)}</b> · <b>{st.utterances}</b> 句</div>;
 }
 
-export function MeetingPage({ id }: { id: string }) {
+export function MeetingPage({ id, at }: { id: string; at?: string | null }) {
   const s = useMeeting(`/ws/meetings/${id}`);
   const [dialog, setDialog] = useState<"" | "pair" | "stop" | "confirm" | "delete" | "edit">("");
+  const [noticeDone, setNoticeDone] = useState(false);   // 開始後提醒告知與會者（ADR-0003），複製或關閉後不再顯示
   const [confirmDismissed, setConfirmDismissed] = useState(false);
-  const [tab, setTab] = useState("minutes");
+  const [tab, setTab] = useState(at ? "both" : "minutes");
   const [error, setError] = useState("");
   const m = s.meeting;
   useTick(500, m?.status === "live");
@@ -137,6 +144,21 @@ export function MeetingPage({ id }: { id: string }) {
           <Button size="sm" variant="primary" onClick={() => setDialog("stop")}>結束並整理</Button>
         </div>
       )}
+      {inMeeting && m.status !== "ending" && !noticeDone && (
+        <div className="banner" style={{ margin: "12px 12px 0", background: "var(--info-soft)" }}>
+          <Icon name="info" size={16} />
+          <span style={{ flex: 1 }}>記得告知與會者正在使用 ELIVO 記錄。不希望被記錄時，隨時可以暫停或刪除。</span>
+          <Button size="sm" variant="ghost" icon="copy" onClick={() => navigator.clipboard.writeText(NOTICE).then(() => setNoticeDone(true))}>複製告知文字</Button>
+          <IconButton icon="x" label="已告知" size="sm" variant="ghost" onClick={() => setNoticeDone(true)} />
+        </div>
+      )}
+      {(m.status === "ended" || m.status === "confirmed") && (untitled(m.title) || !m.space_id) && (
+        <div className="banner" style={{ margin: "12px 12px 0", background: "var(--info-soft)" }}>
+          <Icon name="folder-pen" size={16} />
+          <span style={{ flex: 1 }}>補上名稱與分類：之後比較好找；歸到 Space 後，確認過的決策也會在之後的會議提醒你。</span>
+          <Button size="sm" onClick={() => setDialog("edit")}>補上</Button>
+        </div>
+      )}
       {m.status === "ending" && (
         <div className="banner" style={{ margin: "12px 12px 0", background: "var(--info-soft)" }}>
           <Icon name="loader" size={16} />正在做最後一次整理，完成後會請你確認決策與待辦。
@@ -167,7 +189,7 @@ export function MeetingPage({ id }: { id: string }) {
             <Tabs value={tab} onChange={setTab} items={[{ id: "minutes", label: "會議記錄" }, { id: "both", label: "記錄＋逐字稿" }]} />
           </div>
           {tab === "both"
-            ? <LiveBody s={s} emptyMinutes={emptyMinutes} editing={editing} />
+            ? <LiveBody s={s} emptyMinutes={emptyMinutes} editing={editing} at={at} />
             : (
               <div className="panel context" style={{ flex: 1, minHeight: 0 }}>
                 <div className="scroll">
