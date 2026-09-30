@@ -5,11 +5,17 @@ ASR 與會議記錄的實驗過程與數據在 [`spikes/asr-realtime/`](../../sp
 
 ## 啟動
 
+在 Finder 雙擊 repo 根目錄的 `ELIVO.command`，或在終端機：
+
 ```bash
-~/.venvs/elivo-asr/bin/pip install -r requirements.txt
-../../apps/capture-mac/systap/build.sh          # 系統音訊擷取（Core Audio process tap）
-cd services/realtime && ~/.venvs/elivo-asr/bin/python -m elivo      # http://localhost:8765
+bin/elivo            # 啟動並打開瀏覽器（前端、systap 有改會自動重新建置；已經在跑就直接打開）
+bin/elivo demo       # 不用開口：播放 6 分鐘合成會議（兩條音軌）
+bin/elivo restart    # 改了後端程式之後
+bin/elivo stop
+bin/elivo logs       # 服務記錄在 ~/ELIVO-data/logs/service.log
 ```
+
+第一次安裝：`~/.venvs/elivo-asr/bin/pip install -r requirements.txt`，前端 `cd apps/web && npm install`。
 
 模型放在 `~/.cache/whisper.cpp/`（見 spike 的 README），LLM 金鑰放在 macOS 鑰匙圈（`elivo-ica-api-key`）。
 

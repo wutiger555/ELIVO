@@ -1,0 +1,98 @@
+#!/bin/bash
+# ELIVO 本機測試：一個指令啟動、停止、看記錄。
+#   bin/elivo            啟動（前端有改就先重新建置），並打開瀏覽器；已經在跑就直接打開
+#   bin/elivo stop       停止服務（收音中的會議會標成「中斷」，下次可以繼續）
+#   bin/elivo restart    重新啟動（改了後端程式之後用）
+#   bin/elivo status     是否在跑、網址
+#   bin/elivo logs       即時看服務記錄（Ctrl-C 離開，不會停止服務）
+#   bin/elivo demo       不用開口：播放 6 分鐘合成會議（兩條音軌）當作一場新會議
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PY="$HOME/.venvs/elivo-asr/bin/python"
+PORT=8765
+URL="http://localhost:$PORT"
+LOG_DIR="$HOME/ELIVO-data/logs"
+LOG="$LOG_DIR/service.log"
+SYNTH="$HOME/ELIVO-data/eval/datasets/synthetic"
+
+pid() { lsof -t -nP -iTCP:$PORT -sTCP:LISTEN 2>/dev/null | head -1; }
+ready() { curl -sf "$URL/api/status" >/dev/null; }
+
+build_web() {
+  local dist="$ROOT/apps/web/dist/index.html"
+  if [[ ! -f "$dist" ]] || [[ -n "$(find "$ROOT/apps/web/src" "$ROOT/apps/web/index.html" "$ROOT/design/components" "$ROOT/design/tokens" -newer "$dist" -print -quit)" ]]; then
+    echo "→ 前端有更新，重新建置…"
+    (cd "$ROOT/apps/web" && npm run build --silent >/dev/null) || { echo "✗ 前端建置失敗：cd apps/web && npm run build 看錯誤"; exit 1; }
+  fi
+}
+
+build_systap() {
+  local bin="$ROOT/apps/capture-mac/systap/systap" src="$ROOT/apps/capture-mac/systap/main.swift"
+  if [[ ! -x "$bin" || "$src" -nt "$bin" ]]; then
+    echo "→ 建置系統音訊擷取（systap）…"
+    "$ROOT/apps/capture-mac/systap/build.sh" >/dev/null || echo "！systap 建置失敗，只能用麥克風"
+  fi
+}
+
+start() {
+  if [[ -n "$(pid)" ]]; then
+    echo "✓ ELIVO 已經在跑"
+  else
+    build_web
+    build_systap
+    mkdir -p "$LOG_DIR"
+    echo "→ 啟動服務（載入語音模型約 10–20 秒）…"
+    (cd "$ROOT/services/realtime" && nohup "$PY" -m elivo >>"$LOG" 2>&1 &)
+    for _ in $(seq 60); do ready && break; sleep 1; done
+    ready || { echo "✗ 服務沒有起來，最後幾行記錄："; tail -20 "$LOG"; exit 1; }
+    echo "✓ ELIVO 已啟動"
+  fi
+  status
+  open "$URL"
+}
+
+stop() {
+  local p; p="$(pid)"
+  [[ -z "$p" ]] && { echo "ELIVO 沒有在跑"; return; }
+  kill "$p"
+  for _ in $(seq 10); do [[ -z "$(pid)" ]] && break; sleep 1; done
+  [[ -n "$(pid)" ]] && kill -9 "$p"
+  echo "✓ 已停止"
+}
+
+status() {
+  if ready; then
+    local lan; lan="$(curl -sf "$URL/api/status" | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["lan_url"])')"
+    echo "  這台 Mac：$URL"
+    echo "  iPad／手機：在會議畫面按 QR code 圖示掃描（同一個 Wi-Fi，$lan）"
+    echo "  記錄：$LOG"
+  else
+    echo "ELIVO 沒有在跑"
+  fi
+}
+
+demo() {
+  [[ -f "$SYNTH/meeting-long-me.wav" ]] || { echo "✗ 找不到合成音檔 $SYNTH/meeting-long-*.wav"; exit 1; }
+  ready || start
+  local id
+  id="$(curl -sf -X POST "$URL/api/meetings" -H 'Content-Type: application/json' -d "{
+    \"title\": \"示範：官網與行銷週會 $(date +%m/%d\ %H:%M)\", \"mode\": \"standard\", \"ai_policy\": \"economy\",
+    \"glossary\": \"Strapi, WordPress, CMS, SEO\", \"tags\": [\"示範\"],
+    \"sources\": [{\"speaker\": \"我\", \"device\": \"file:$SYNTH/meeting-long-me.wav\"},
+                  {\"speaker\": \"他人\", \"device\": \"file:$SYNTH/meeting-long-other.wav\"}]}" \
+    | "$PY" -c 'import json,sys; print(json.load(sys.stdin)["id"])')" || { echo "✗ 建立會議失敗（可能有另一場正在收音）"; exit 1; }
+  curl -sf -X POST "$URL/api/meetings/$id/start" >/dev/null || { echo "✗ 開始失敗（可能有另一場正在收音）"; exit 1; }
+  echo "✓ 示範會議開始（約 6 分鐘）"
+  open "$URL/#/m/$id"
+}
+
+case "${1:-start}" in
+  start) start ;;
+  stop) stop ;;
+  restart) stop; start ;;
+  status) status ;;
+  logs) tail -f "$LOG" ;;
+  demo) demo ;;
+  *) sed -n '2,8p' "$0"; exit 1 ;;
+esac
