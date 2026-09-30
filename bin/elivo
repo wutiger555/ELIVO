@@ -46,7 +46,9 @@ start() {
     (cd "$ROOT/services/realtime" && nohup "$PY" -m elivo >>"$LOG" 2>&1 &)
     for _ in $(seq 60); do ready && break; sleep 1; done
     ready || { echo "✗ 服務沒有起來，最後幾行記錄："; tail -20 "$LOG"; exit 1; }
-    echo "✓ ELIVO 已啟動"
+    # 服務在跑的期間不讓 Mac 閒置睡眠（長會議收音到一半睡著會中斷）；服務結束就自動解除
+    (nohup caffeinate -i -w "$(pid)" >/dev/null 2>&1 &)
+    echo "✓ ELIVO 已啟動（執行期間 Mac 不會閒置睡眠）"
   fi
   status
   open "$URL"

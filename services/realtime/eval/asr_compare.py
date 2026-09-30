@@ -172,7 +172,14 @@ def main():
     out = RUNS_DIR / f"asr-compare-{a.audio.stem}.json"
     out.write_text(json.dumps({"audio": str(a.audio), "segments": [(s / SR, e / SR) for s, e in segs], "rows": rows,
                                "texts": variants}, ensure_ascii=False, indent=1))
-    print(f"\n逐段結果：{out}")
+    # 逐段並列（沒有標準答案時人工比對用）
+    names = list(variants)
+    md = [f"# {a.audio.name}", "", "| 時間 | " + " | ".join(names) + " |", "|---|" + "---|" * len(names)]
+    for i, (st, en) in enumerate(segs):
+        cells = [variants[n][i].replace("|", "｜") for n in names]
+        md.append(f"| {int(st / SR) // 60:02d}:{int(st / SR) % 60:02d} | " + " | ".join(cells) + " |")
+    out.with_suffix(".md").write_text("\n".join(md) + "\n")
+    print(f"\n逐段結果：{out}\n並列比對：{out.with_suffix('.md')}")
 
 
 if __name__ == "__main__":
