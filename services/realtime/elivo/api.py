@@ -291,12 +291,14 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
         m = meeting_or_404(meeting_id)
         fields = body.model_dump(exclude_none=True)
         if m["status"] != "draft":
-            # 開始後只能改名稱、分類與標籤；模式、音源、術語表在開始前決定
-            fields = {k: v for k, v in fields.items() if k in ("title", "space_id", "series_id", "tags")}
+            # 開始後只能改名稱、分類、標籤與術語表（會中發現人名被聽錯可以馬上補）；模式與音源在開始前決定
+            fields = {k: v for k, v in fields.items() if k in ("title", "space_id", "series_id", "tags", "glossary")}
         updated = st().update_meeting(meeting_id, **fields)
         if meeting_id in mgr().sessions:
             s = mgr().sessions[meeting_id]
             s.meeting = updated
+            if "glossary" in fields:
+                s.set_glossary(updated["glossary"])
             s.notify()   # 開著的會議頁與第二螢幕立即看到新名稱、分類、標籤
         return updated
 

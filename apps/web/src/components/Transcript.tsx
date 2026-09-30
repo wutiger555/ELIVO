@@ -2,7 +2,7 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@design/components/core/Button.jsx";
 import { IconButton } from "@design/components/core/IconButton.jsx";
-import type { Utt } from "../lib/api";
+import type { Fix, Utt } from "../lib/api";
 import { timecode } from "../lib/format";
 
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -50,6 +50,16 @@ function RowEditor({ u, mode, setMode, onEdit, onDelete }: Edit & { u: Utt; mode
   );
 }
 
+/** 標出校正過的術語：滑鼠移上去看原本辨識成什麼。 */
+function marked(text: string, fixes: Fix[]) {
+  const by = new Map(fixes.map((f) => [f.to, f]));
+  const re = new RegExp(`(${[...by.keys()].map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`);
+  return text.split(re).map((part, i) => {
+    const f = by.get(part);
+    return f ? <span key={i} className="fixed" title={`原本辨識為「${f.from}」（${f.auto ? "讀音相同，自動校正" : "AI 依上下文校正"}）`}>{part}</span> : part;
+  });
+}
+
 const Row = memo(function Row({ u, flash, onEdit, onDelete, onSeek }: Edit & { u: Utt; flash: number }) {
   const [mode, setMode] = useState<"view" | "edit" | "delete">("view");
   // settled：已經顯示過的確定字（純文字）；fresh：這次新增、要逐字浮現的字
@@ -80,7 +90,9 @@ const Row = memo(function Row({ u, flash, onEdit, onDelete, onSeek }: Edit & { u
       </div>
       {mode !== "view" ? <RowEditor u={u} mode={mode} setMode={setMode} onEdit={onEdit} onDelete={onDelete} /> : (
       <div className="text">
-        <span key={view.rewrite} className={view.rewrite ? "rewrite" : undefined}>{view.settled}</span>
+        <span key={view.rewrite} className={view.rewrite ? "rewrite" : undefined}>
+          {u.final && u.fixes?.length && !view.fresh ? marked(view.settled, u.fixes) : view.settled}
+        </span>
         {chars.map((ch, i) => (
           <span key={view.settled.length + i} className="ink" style={{ animationDelay: `${Math.round(i * step)}ms` }}>{ch}</span>
         ))}

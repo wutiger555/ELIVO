@@ -140,6 +140,7 @@ export function MeetingEditDialog({ meeting, onClose }: { meeting: import("../li
   const [spaceId, setSpaceId] = useState(meeting.space_id ?? "");
   const [seriesId, setSeriesId] = useState(meeting.series_id ?? "");
   const [tags, setTags] = useState(meeting.tags.join(" "));
+  const [glossary, setGlossary] = useState(meeting.glossary);
   const [error, setError] = useState("");
   useEffect(() => { api.spaces().then(setSpaces).catch((e) => setError(e.message)); }, []);
   const series = spaces.find((s) => s.id === spaceId)?.series ?? [];
@@ -148,6 +149,7 @@ export function MeetingEditDialog({ meeting, onClose }: { meeting: import("../li
     try {
       await api.updateMeeting(meeting.id, {
         title: title.trim(), space_id: spaceId || null, series_id: seriesId || null, tags: tags.split(/[,，\s]+/).filter(Boolean),
+        ...(glossary !== meeting.glossary ? { glossary } : {}),
       });
       onClose();
     } catch (e: any) { setError(e.message); }
@@ -164,6 +166,12 @@ export function MeetingEditDialog({ meeting, onClose }: { meeting: import("../li
         <Select label="例行會議" value={seriesId} onChange={(e) => setSeriesId(e.target.value)} disabled={!spaceId}
           options={[{ value: "", label: "單次會議" }, ...series.map((s) => ({ value: s.id, label: s.name }))]} />
         <Input label="標籤" placeholder="用逗號或空白分隔" value={tags} onChange={(e) => setTags(e.target.value)} />
+        <div>
+          <span className="field-label">術語表</span>
+          <textarea className="field" value={glossary} onChange={(e) => setGlossary(e.target.value)}
+            placeholder="人名、公司名、產品名、英文縮寫，一行一個或用逗號分隔" />
+          <div className="hint">會議進行中也可以改：發現人名或術語被聽錯時補上，之後的辨識與自動校正立即使用。</div>
+        </div>
         {error && <div className="error-text">{error}</div>}
       </div>
     </Dialog>

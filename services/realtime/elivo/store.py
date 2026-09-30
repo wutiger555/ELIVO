@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS utterances (
   text TEXT NOT NULL,
   deleted INTEGER NOT NULL DEFAULT 0,
   edited INTEGER NOT NULL DEFAULT 0,
+  fixes TEXT,                              -- 術語校正紀錄 [{"from", "to", "auto"}]（glossfix.py）
   PRIMARY KEY (meeting_id, id)
 );
 CREATE TABLE IF NOT EXISTS pauses (
@@ -91,6 +92,8 @@ class Store:
         cols = {r[1] for r in self.db.execute("PRAGMA table_info(utterances)")}
         if "edited" not in cols:
             self.db.execute("ALTER TABLE utterances ADD COLUMN edited INTEGER NOT NULL DEFAULT 0")
+        if "fixes" not in cols:
+            self.db.execute("ALTER TABLE utterances ADD COLUMN fixes TEXT")
         cols = {r[1] for r in self.db.execute("PRAGMA table_info(meetings)")}
         if "ai_policy" not in cols:
             self.db.execute("ALTER TABLE meetings ADD COLUMN ai_policy TEXT NOT NULL DEFAULT 'economy'")
@@ -260,11 +263,11 @@ class Store:
 
     # ---- 逐字稿與暫停 ----
 
-    def upsert_utterance(self, meeting_id: str, uid: str, speaker: str, t: float, text: str):
+    def upsert_utterance(self, meeting_id: str, uid: str, speaker: str, t: float, text: str, fixes: list | None = None):
         self._x(
-            "INSERT INTO utterances(meeting_id, id, speaker, t, text) VALUES (?,?,?,?,?)"
-            " ON CONFLICT(meeting_id, id) DO UPDATE SET text=excluded.text",
-            (meeting_id, uid, speaker, t, text),
+            "INSERT INTO utterances(meeting_id, id, speaker, t, text, fixes) VALUES (?,?,?,?,?,?)"
+            " ON CONFLICT(meeting_id, id) DO UPDATE SET text=excluded.text, fixes=excluded.fixes",
+            (meeting_id, uid, speaker, t, text, json.dumps(fixes, ensure_ascii=False) if fixes else None),
         )
 
     def edit_utterance(self, meeting_id: str, uid: str, text: str):
@@ -275,10 +278,13 @@ class Store:
         self._x("DELETE FROM utterances WHERE meeting_id=? AND id=?", (meeting_id, uid))
 
     def utterances(self, meeting_id: str, include_deleted=False) -> list[dict]:
-        sql = "SELECT id, speaker, t, text, deleted, edited FROM utterances WHERE meeting_id=?"
+        sql = "SELECT id, speaker, t, text, deleted, edited, fixes FROM utterances WHERE meeting_id=?"
         if not include_deleted:
             sql += " AND deleted=0"
-        return [dict(r) for r in self._q(sql + " ORDER BY t, rowid", (meeting_id,))]
+        rows = [dict(r) for r in self._q(sql + " ORDER BY t, rowid", (meeting_id,))]
+        for r in rows:
+            r["fixes"] = json.loads(r["fixes"]) if r["fixes"] else []
+        return rows
 
     def delete_utterances(self, meeting_id: str):
         self._x("DELETE FROM utterances WHERE meeting_id=?", (meeting_id,))

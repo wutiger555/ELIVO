@@ -7,7 +7,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from elivo.asr.whisper_server import Result  # noqa: E402
-from elivo.minutes import Change, OpBatch, Reflection  # noqa: E402
+from elivo.minutes import Change, FixVerdict, OpBatch, Reflection  # noqa: E402
 
 SMOKE = Path("~/ELIVO-data/eval/datasets/synthetic/smoke.wav").expanduser()
 
@@ -28,6 +28,8 @@ class FakeLLM:
 
     async def complete_json(self, model, system, prompt, schema, max_tokens=8192, format_hint=None):
         self.calls.append(schema.__name__)
+        if schema is FixVerdict:
+            return FixVerdict(accept=[0]), {}
         if schema is Change:
             return Change(relation="changed", note="測試：內容不同"), {}
         if schema is OpBatch:

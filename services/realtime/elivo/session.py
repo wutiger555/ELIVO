@@ -21,6 +21,7 @@ from .asr.stream_engine import StreamEngine
 from .capture import SPEAKER_SLUG, Source, rms, start_source
 from .config import AUDIO_DIR, SPOOL_DIR
 from .minutes import MinutesEngine
+from .glossfix import GlossaryFixer
 from .surfacing import Surfacer
 
 LEVEL_INTERVAL = 0.2
@@ -41,9 +42,10 @@ class MeetingSession:
         self.id, self.meeting, self.broadcast = meeting["id"], meeting, broadcast
         self.ephemeral = meeting["mode"] == "ephemeral"
         self.glossary = split_glossary(meeting["glossary"])
+        self.fixer = GlossaryFixer(self.glossary)   # 術語校正（拼音比對）與送給 Whisper 的術語提示
         self.base = meeting["duration_s"] or 0.0   # 已累積的收音秒數（不含暫停）
         self.resumed_at: float | None = None
-        self.sources, self.queues, self.tasks = [], [], []
+        self.sources, self.queues, self.tasks, self.engines = [], [], [], []
         self.utts: dict[str, dict] = {}
         self.records: list[dict] = []
         self.counters: dict[str, itertools.count] = {}
@@ -58,7 +60,7 @@ class MeetingSession:
         self.surfacer.load(lines)
         for l in lines:
             self.utts[l["id"]] = {"type": "utt", "id": l["id"], "speaker": l["speaker"], "committed": l["text"],
-                                  "tentative": "", "final": True, "t": l["t"], "edited": bool(l["edited"])}
+                                  "tentative": "", "final": True, "t": l["t"], "edited": bool(l["edited"]), "fixes": l["fixes"]}
         for sp in {l["speaker"] for l in lines}:
             n = max(int(l["id"].rsplit("-", 1)[1]) for l in lines if l["speaker"] == sp)
             self.counters[sp] = itertools.count(n + 1)
@@ -155,7 +157,7 @@ class MeetingSession:
                 await asyncio.wait_for(self.minutes.finish(), timeout=180)
             except asyncio.TimeoutError:
                 pass
-        self._finish_audio()
+        await asyncio.to_thread(self._finish_audio)   # 長會議的 FLAC 轉檔要幾秒，不卡住其他連線
         self._set(status="ended", ended_at=time.time(), duration_s=self.base, stats=self.stats(),
                   **({} if self.ephemeral or not self.minutes else {"minutes": self.minutes.export()}))
 
@@ -240,7 +242,7 @@ class MeetingSession:
 
     async def _open_capture(self):
         loop = asyncio.get_running_loop()
-        prompt = "、".join(self.glossary) or None
+        prompt = self.fixer.prompt(self._recent_text())
         if not self.ephemeral:
             SPOOL_DIR.mkdir(parents=True, exist_ok=True)
         try:
@@ -256,6 +258,7 @@ class MeetingSession:
                 await start_source(source)
                 self.queues.append(queue)
                 self.tasks.append(asyncio.create_task(engine.run(queue)))
+                self.engines.append(engine)
         except Exception as e:
             await self._close_capture()
             raise SessionError(f"無法開啟音訊來源：{e}")
@@ -268,7 +271,7 @@ class MeetingSession:
         for q in self.queues:
             q.put_nowait(None)  # 引擎收到 None 會把正在說的那一句定稿
         await asyncio.gather(*self.tasks)
-        self.sources, self.queues, self.tasks = [], [], []
+        self.sources, self.queues, self.tasks, self.engines = [], [], [], []
 
     def _chunk(self, queue, speaker, chunk):
         queue.put_nowait(chunk)
@@ -299,9 +302,12 @@ class MeetingSession:
             self.utts.pop(ev["id"], None)
         else:
             self.utts[ev["id"]] = ev
+        candidates = []
         if ev["final"] and ev["committed"]:
+            fix = self.fixer.fix(ev["committed"])
+            ev["committed"], ev["fixes"], candidates = fix.text, fix.fixes, fix.candidates
             if not self.ephemeral:
-                self.store.upsert_utterance(self.id, ev["id"], ev["speaker"], ev["t"], ev["committed"])
+                self.store.upsert_utterance(self.id, ev["id"], ev["speaker"], ev["t"], ev["committed"], ev["fixes"])
             # 會議時間也跟著每句寫入：意外中斷後繼續時，時鐘從中斷前的位置接著走
             self.store.update_meeting(self.id, duration_s=self.clock())
             if self.minutes:
@@ -310,6 +316,43 @@ class MeetingSession:
         self.broadcast(self.id, ev)
         for c in cards:
             self.broadcast(self.id, {"type": "hint", "hint": c})
+        if ev["final"] and ev["committed"]:
+            prompt = self.fixer.prompt(self._recent_text())
+            for e in self.engines:
+                e.prompt = prompt
+            if candidates and self.minutes and self.minutes.enabled:
+                asyncio.get_running_loop().create_task(self._judge_fixes(ev["id"], ev["committed"], candidates))
+
+    def set_glossary(self, text: str):
+        """會中改了術語表：之後的辨識提示、術語校正、會議記錄與提示都用新的。"""
+        self.glossary = split_glossary(text)
+        self.fixer = GlossaryFixer(self.glossary)
+        self.surfacer.recall.glossary = {g.lower() for g in self.glossary}
+        if self.minutes:
+            self.minutes.glossary = "術語表（正確寫法）：" + "、".join(self.glossary) + "\n\n" if self.glossary else ""
+        prompt = self.fixer.prompt(self._recent_text())
+        for e in self.engines:
+            e.prompt = prompt
+
+    def _recent_text(self, window: float = 120.0) -> str:
+        """最近兩分鐘定稿的句子（挑選術語提示用）。"""
+        now = self.clock()
+        return " ".join(u["committed"] for u in self.utts.values() if u.get("final") and now - u["t"] <= window)
+
+    async def _judge_fixes(self, uid: str, text: str, candidates: list[dict]):
+        """讀音相近但不確定的術語：請 fast 模型依上下文判斷，接受的才改（使用者改過這句就不動）。"""
+        before = [u["committed"] for u in self.utts.values() if u.get("final") and u["id"] != uid][-2:]
+        accepted = await self.minutes.judge_fixes(text, candidates, before)
+        u = self.utts.get(uid)
+        if not accepted or not u or u["committed"] != text or u.get("edited"):
+            return
+        new, fixes = self.fixer.apply(text, candidates, accepted)
+        u.update(committed=new, fixes=(u.get("fixes") or []) + fixes)
+        if not self.ephemeral:
+            self.store.upsert_utterance(self.id, uid, u["speaker"], u["t"], new, u["fixes"])
+        if self.minutes:
+            self.minutes.edit_line(uid, new)
+        self.broadcast(self.id, u)
 
     def _on_minutes(self, ev: dict):
         cards, candidates = self.surfacer.set_items(ev["minutes"]["items"], ev["minutes"].get("utt_t", {}), self.clock())

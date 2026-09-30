@@ -161,6 +161,16 @@ note：changed 時用 20 字以內寫出差異（例如「CMS 由 WordPress 改�
 CHANGE_FORMAT = '格式：{"relation": "same|changed|unrelated", "note": "…"}'
 
 
+class FixVerdict(BaseModel):
+    accept: list[int]
+
+
+FIX_SYSTEM = """你校正語音辨識的逐字稿。給你一句逐字稿（與前文）和幾個候選替換：原句裡某個詞可能是術語表的詞被聽錯了（讀音相同或相近）。
+只有根據上下文，原句的那個詞確實是在指該術語時才接受；原句本身就通順合理、意思說得通時不要換。
+例如術語「凱基」：「凱基那邊的報價」接受；「電腦開機之後」不接受。只回傳接受的候選編號。"""
+FIX_FORMAT = '格式：{"accept": [0, 2]}（都不接受給 []）'
+
+
 COMMON_RULES = """規則：
 - 只根據逐字稿，不要推測，也不要補充外部知識；語音辨識的錯字若無法確定原意，照原文保留。
 - 不判斷任何人的情緒、態度、語氣或參與度。
@@ -314,6 +324,15 @@ class MinutesEngine:
         out = await self._call("judge", self.fast_model, CHANGE_SYSTEM, f"先前的決策：{old}\n這場的決策：{new}",
                                Change, 300, 0, format_hint=CHANGE_FORMAT)
         return out if isinstance(out, Change) else None
+
+    async def judge_fixes(self, sentence: str, candidates: list[dict], context: list[str]) -> list[int] | None:
+        """術語校正的候選（glossfix.py）：依上下文判斷哪些要換。只有出現候選的句子才會呼叫。"""
+        if not self.enabled:
+            return None
+        listed = "\n".join(f"{i}. 「{c['from']}」→「{c['to']}」" for i, c in enumerate(candidates))
+        prompt = (("前文：\n" + "\n".join(context) + "\n") if context else "") + f"這句：{sentence}\n候選：\n{listed}"
+        out = await self._call("fix", self.fast_model, FIX_SYSTEM, prompt, FixVerdict, 100, 1, format_hint=FIX_FORMAT)
+        return [i for i in out.accept if 0 <= i < len(candidates)] if isinstance(out, FixVerdict) else None
 
     # ---- fast ----
 

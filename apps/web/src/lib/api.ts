@@ -27,7 +27,9 @@ export interface Meeting {
   minutes_error?: string | null;
 }
 
-export interface Utt { type: "utt"; id: string; speaker: string; committed: string; tentative: string; final: boolean; t: number; edited?: boolean }
+/** fixes：術語校正紀錄（auto：讀音相同直接改；否則是 AI 依上下文確認後改的）。 */
+export interface Fix { from: string; to: string; auto: boolean }
+export interface Utt { type: "utt"; id: string; speaker: string; committed: string; tentative: string; final: boolean; t: number; edited?: boolean; fixes?: Fix[] }
 export interface Revision { t: number; by: "fast" | "reflect" | "user"; change: string; utt_ids: string[] }
 export interface Item {
   id: string; kind: Kind; text: string; status: string;
