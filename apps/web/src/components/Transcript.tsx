@@ -7,7 +7,7 @@ import { timecode } from "../lib/format";
 
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-type Edit = { onEdit?: (id: string, text: string) => Promise<void>; onDelete?: (id: string) => Promise<void> };
+type Edit = { onEdit?: (id: string, text: string) => Promise<void>; onDelete?: (id: string) => Promise<void>; onSeek?: (u: Utt) => void };
 
 /** 修正或刪除一句逐字稿（只有定稿的句子可以編輯）。 */
 function RowEditor({ u, mode, setMode, onEdit, onDelete }: Edit & { u: Utt; mode: "edit" | "delete"; setMode: (m: "view" | "edit" | "delete") => void }) {
@@ -50,7 +50,7 @@ function RowEditor({ u, mode, setMode, onEdit, onDelete }: Edit & { u: Utt; mode
   );
 }
 
-const Row = memo(function Row({ u, flash, onEdit, onDelete }: Edit & { u: Utt; flash: number }) {
+const Row = memo(function Row({ u, flash, onEdit, onDelete, onSeek }: Edit & { u: Utt; flash: number }) {
   const [mode, setMode] = useState<"view" | "edit" | "delete">("view");
   // settled：已經顯示過的確定字（純文字）；fresh：這次新增、要逐字浮現的字
   const [view, setView] = useState({ settled: u.committed, fresh: "", rewrite: 0 });
@@ -73,7 +73,9 @@ const Row = memo(function Row({ u, flash, onEdit, onDelete }: Edit & { u: Utt; f
     <div id={`utt-${u.id}`} className={`utt${u.final ? "" : " live"}${flash ? " flash" : ""}`} key={flash}>
       <div className="gutter">
         <span className={`who${u.speaker === "我" ? " me" : ""}`}>{u.speaker}</span>
-        <span className="tc">{timecode(u.t)}</span>
+        {onSeek
+          ? <button type="button" className="tc seek" title="從這句開始播放錄音" onClick={() => onSeek(u)}>{timecode(u.t)}</button>
+          : <span className="tc">{timecode(u.t)}</span>}
         {u.edited && <span className="tc">已修改</span>}
       </div>
       {mode !== "view" ? <RowEditor u={u} mode={mode} setMode={setMode} onEdit={onEdit} onDelete={onDelete} /> : (
@@ -95,7 +97,7 @@ const Row = memo(function Row({ u, flash, onEdit, onDelete }: Edit & { u: Utt; f
   );
 });
 
-export function Transcript({ utts, pauses = [], focus, emptyText = "等待說話…", onEdit, onDelete, follow = true }: Edit & {
+export function Transcript({ utts, pauses = [], focus, emptyText = "等待說話…", onEdit, onDelete, onSeek, follow = true }: Edit & {
   follow?: boolean;   // 會議進行中：自動跟著最新一句；會後：從頭開始看
   utts: Utt[];
   pauses?: { start_t: number; end_t: number | null }[];
@@ -155,7 +157,7 @@ export function Transcript({ utts, pauses = [], focus, emptyText = "等待說話
                 {r.pause.end_t == null ? "暫停中" : "暫停"} · {timecode(r.pause.start_t)}
               </div>
             ) : (
-              <Row key={r.id} u={r} flash={focus?.id === r.id ? focus.n : 0} onEdit={onEdit} onDelete={onDelete} />
+              <Row key={r.id} u={r} flash={focus?.id === r.id ? focus.n : 0} onEdit={onEdit} onDelete={onDelete} onSeek={onSeek} />
             ),
           )}
         </div>

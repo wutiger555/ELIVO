@@ -103,6 +103,9 @@ export function Library() {
               ))}
               <AddInline placeholder="新 Space，例如客戶或專案" onAdd={async (n) => { await api.createSpace(n); reload(); }} />
             </div>
+            <div className="nav-group">
+              <button className="nav-item" onClick={() => go("/audio")}><Icon name="audio-lines" size={15} />錄音檔</button>
+            </div>
             {tags.length > 0 && (
               <div className="nav-group">
                 <div className="label">Tags</div>

@@ -5,7 +5,8 @@ import { api, type Space } from "./api";
 type Source = { speaker: string; device: number | string | null };
 const KEY = "elivo.sources";
 
-export const NOTICE = "本場會議使用 ELIVO 在本機產生逐字稿與會議記錄，僅供整理會議內容。不做情緒分析、不建立聲紋。如果不希望被記錄，請隨時告訴我，我會暫停或刪除。";
+// 內容要和實際做法一致：錄音與逐字稿在本機，會議記錄會把逐字稿送到 AI 服務整理
+export const NOTICE = "本場會議使用 ELIVO 錄音並在本機產生逐字稿，錄音與逐字稿保存在我的電腦；會議記錄由 AI 服務整理逐字稿產生，僅供整理會議內容。不做情緒分析、不建立聲紋。如果不希望被記錄，請隨時告訴我，我會暫停或刪除。";
 
 export function saveSources(sources: Source[]) {
   try { localStorage.setItem(KEY, JSON.stringify(sources)); } catch { /* 無痕模式等情況：下次用預設 */ }
@@ -27,7 +28,7 @@ export async function quickRecord(space?: Space, seriesId?: string): Promise<str
   const m = await api.createMeeting({
     title: `錄音 ${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`,
     space_id: space?.id ?? null, series_id: seriesId ?? null, mode: "standard", ai_policy: "economy",
-    keep_audio: false, glossary: space?.glossary ?? "", sources: lastSources(), tags: [],
+    keep_audio: true, glossary: space?.glossary ?? "", sources: lastSources(), tags: [],
   });
   await api.action(m.id, "start");
   return m.id;

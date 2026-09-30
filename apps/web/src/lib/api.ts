@@ -41,6 +41,15 @@ export interface LedgerItem {
   owner: string | null; due: string | null; value: string | null; answer: string | null; superseded_by: string | null;
   meeting: LedgerMeeting; jump: string | null; quote: string | null;
 }
+export interface AudioFile { slug: string; speaker: string; bytes: number; url: string }
+export interface AudioLibrary {
+  meetings: {
+    // 會議已刪除但檔案還在時，status 是 "deleted"
+    meeting: Pick<Meeting, "id" | "title" | "space_id" | "started_at" | "ended_at" | "created_at" | "duration_s"> & { status: Meeting["status"] | "deleted" };
+    files: AudioFile[]; bytes: number;
+  }[];
+  total_bytes: number; free_bytes: number;
+}
 export interface Minutes { version: number; reflected_at: number | null; summary: { topic: string; points: string[] }[]; items: Item[]; utt_t: Record<string, number> }
 export type HintType = "recall" | "previous" | "number_drift" | "conflict" | "open_question" | "unowned_action";
 /** 主動提示卡片（見 services/realtime/elivo/surfacing.py）。promoted 醒目顯示，ambient 安靜列出。 */
@@ -111,7 +120,12 @@ export const api = {
   editUtt: (id: string, uid: string, text: string) => call("PATCH", `/api/meetings/${id}/utterances/${encodeURIComponent(uid)}`, { text }),
   deleteUtt: (id: string, uid: string) => call("DELETE", `/api/meetings/${id}/utterances/${encodeURIComponent(uid)}`),
   action: (id: string, action: "start" | "pause" | "resume" | "stop") => call<Meeting>("POST", `/api/meetings/${id}/${action}`),
-  confirm: (id: string, keep: string[], edits: Record<string, Partial<Item>>) => call<Snapshot>("POST", `/api/meetings/${id}/confirm`, { keep, edits }),
+  confirm: (id: string, keep: string[], edits: Record<string, Partial<Item>>, keepAudio?: boolean) =>
+    call<Snapshot>("POST", `/api/meetings/${id}/confirm`, { keep, edits, keep_audio: keepAudio }),
+  audio: (id: string) => call<AudioFile[]>("GET", `/api/meetings/${id}/audio`),
+  deleteAudio: (id: string) => call<{ freed: number }>("DELETE", `/api/meetings/${id}/audio`),
+  audioLibrary: () => call<AudioLibrary>("GET", "/api/audio"),
+  audioCleanup: (days: number) => call<{ freed: number; meetings: number }>("POST", "/api/audio/cleanup", { older_than_days: days }),
   exportMd: (id: string) => call<string>("GET", `/api/meetings/${id}/export.md`),
   pair: (id: string) => call<{ token: string; url: string; expires_at: number }>("POST", `/api/meetings/${id}/pair`),
   unpair: (id: string) => call("DELETE", `/api/meetings/${id}/pair`),

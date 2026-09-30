@@ -4,8 +4,10 @@ import { Button } from "@design/components/core/Button.jsx";
 import { Checkbox } from "@design/components/forms/Checkbox.jsx";
 import { Input } from "@design/components/forms/Input.jsx";
 import { Select } from "@design/components/forms/Select.jsx";
+import { Switch } from "@design/components/forms/Switch.jsx";
 import { Dialog } from "@design/components/feedback/Dialog.jsx";
-import { api, type Item, type Minutes } from "../lib/api";
+import { api, type AudioFile, type Item, type Minutes } from "../lib/api";
+import { bytes } from "../lib/format";
 import { ACTIVE } from "./Minutes";
 
 /** 第二螢幕：產生帶一次性配對碼的網址與 QR code；同一個 Wi-Fi 的手機／iPad 掃描後唯讀檢視這場會議。 */
@@ -54,6 +56,9 @@ export function ConfirmDialog({ meetingId, minutes, onDone, onLater }: {
   const [edits, setEdits] = useState<Record<string, Partial<Item>>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [audio, setAudio] = useState<AudioFile[]>([]);
+  const [keepAudio, setKeepAudio] = useState(true);
+  useEffect(() => { api.audio(meetingId).then(setAudio).catch(() => setAudio([])); }, [meetingId]);
   const decisions = items.filter((it) => it.kind === "decision");
   const actions = items.filter((it) => it.kind === "action");
   const toggle = (id: string, on: boolean) => setKeep((s) => { const n = new Set(s); on ? n.add(id) : n.delete(id); return n; });
@@ -66,7 +71,7 @@ export function ConfirmDialog({ meetingId, minutes, onDone, onLater }: {
         const it = items.find((x) => x.id === id)!;
         return [id, Object.fromEntries(Object.entries(e).filter(([k, v]) => v !== (it as any)[k]))];
       }).filter(([, e]) => Object.keys(e as object).length));
-      await api.confirm(meetingId, [...keep], changed);
+      await api.confirm(meetingId, [...keep], changed, audio.length ? keepAudio : undefined);
       onDone();
     } catch (e: any) {
       setError(e.message);
@@ -103,6 +108,13 @@ export function ConfirmDialog({ meetingId, minutes, onDone, onLater }: {
           </div>
         ))}
       </div>
+      {audio.length > 0 && (
+        <div className="confirm-audio">
+          <Switch checked={keepAudio} onChange={setKeepAudio}
+            label={`保留錄音（${bytes(audio.reduce((n, f) => n + f.bytes, 0))}）`} />
+          <div className="hint">{keepAudio ? "之後可以回放、對照逐字稿；不需要時可在「錄音檔」統一清理。" : "確認後刪除這場的錄音，逐字稿與會議記錄保留。"}</div>
+        </div>
+      )}
       {error && <div className="error-text">{error}</div>}
     </Dialog>
   );

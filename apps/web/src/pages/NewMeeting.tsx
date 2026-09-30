@@ -35,7 +35,7 @@ export function NewMeeting({ query }: { query: URLSearchParams }) {
   const [mic, setMic] = useState({ on: true, device: "" });
   const [sys, setSys] = useState({ on: false });
   const [mode, setMode] = useState<"standard" | "ephemeral">("standard");
-  const [keepAudio, setKeepAudio] = useState(false);
+  const [keepAudio, setKeepAudio] = useState(true);
   const [aiPolicy, setAiPolicy] = useState<"economy" | "quality">("economy");
   const [glossary, setGlossary] = useState<string | null>(null);   // null＝沿用 Space 的術語表
   const [brief, setBrief] = useState<{ meeting: { title: string; started_at: number } | null; items: (Item & { from?: LedgerMeeting })[] } | null>(null);
@@ -144,7 +144,7 @@ export function NewMeeting({ query }: { query: URLSearchParams }) {
               </div>
               {mode === "standard" && (
                 <div style={{ marginTop: 12 }}>
-                  <Switch checked={keepAudio} onChange={setKeepAudio} label="會後保存錄音（FLAC，存在這台 Mac）" />
+                  <Switch checked={keepAudio} onChange={setKeepAudio} label="保存錄音（FLAC，存在這台 Mac；會後確認時可以刪除）" />
                 </div>
               )}
             </div>

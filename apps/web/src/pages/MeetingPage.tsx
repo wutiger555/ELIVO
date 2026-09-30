@@ -10,7 +10,8 @@ import { AskDialog, ConfirmDialog, MeetingEditDialog, PairDialog } from "../comp
 import { Hints } from "../components/Hints";
 import { Minutes, type MinutesEditing } from "../components/Minutes";
 import { Transcript } from "../components/Transcript";
-import { api } from "../lib/api";
+import { AudioBar, type Seek } from "../components/AudioBar";
+import { api, type Utt } from "../lib/api";
 import { STATUS_LABEL, dateTime, duration, go, timecode, useTick } from "../lib/format";
 import { NOTICE, untitled } from "../lib/quick";
 import { meetingClock, useMeeting, type MeetingState } from "../lib/useMeeting";
@@ -21,7 +22,9 @@ export interface Editing {
   minutes: MinutesEditing;
 }
 
-export function LiveBody({ s, emptyMinutes, editing, at }: { s: MeetingState; emptyMinutes: string; editing?: Editing; at?: string | null }) {
+export function LiveBody({ s, emptyMinutes, editing, at, onSeek }: {
+  s: MeetingState; emptyMinutes: string; editing?: Editing; at?: string | null; onSeek?: (u: Utt) => void;
+}) {
   const [focus, setFocus] = useState<{ id: string; n: number } | null>(null);
   // 從帳本點進來（#/m/:id?at=句子id）：逐字稿載入後跳到那一句
   const [pending, setPending] = useState(at);
@@ -33,7 +36,7 @@ export function LiveBody({ s, emptyMinutes, editing, at }: { s: MeetingState; em
     <div className="live">
       <section className="conversation">
         <div className="label">Live conversation <span className="meta">繁中 · 中英混說</span></div>
-        <Transcript utts={s.utts} pauses={s.pauses} focus={focus} onEdit={editing?.onEditUtt} onDelete={editing?.onDeleteUtt}
+        <Transcript utts={s.utts} pauses={s.pauses} focus={focus} onEdit={editing?.onEditUtt} onDelete={editing?.onDeleteUtt} onSeek={onSeek}
           follow={!["ended", "confirmed"].includes(s.meeting?.status ?? "")} />
       </section>
       <aside className="context panel">
@@ -60,6 +63,7 @@ export function MeetingPage({ id, at }: { id: string; at?: string | null }) {
   const [noticeDone, setNoticeDone] = useState(false);   // 開始後提醒告知與會者（ADR-0003），複製或關閉後不再顯示
   const [confirmDismissed, setConfirmDismissed] = useState(false);
   const [tab, setTab] = useState(at ? "both" : "minutes");
+  const [seek, setSeek] = useState<Seek | null>(null);
   const [error, setError] = useState("");
   const m = s.meeting;
   useTick(500, m?.status === "live");
@@ -188,8 +192,10 @@ export function MeetingPage({ id, at }: { id: string; at?: string | null }) {
             <div className="spacer" />
             <Tabs value={tab} onChange={setTab} items={[{ id: "minutes", label: "會議記錄" }, { id: "both", label: "記錄＋逐字稿" }]} />
           </div>
+          <AudioBar meetingId={id} seek={seek} />
           {tab === "both"
-            ? <LiveBody s={s} emptyMinutes={emptyMinutes} editing={editing} at={at} />
+            ? <LiveBody s={s} emptyMinutes={emptyMinutes} editing={editing} at={at}
+                onSeek={(u) => setSeek({ t: u.t, speaker: u.speaker, n: (seek?.n ?? 0) + 1 })} />
             : (
               <div className="panel context" style={{ flex: 1, minHeight: 0 }}>
                 <div className="scroll">

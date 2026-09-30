@@ -49,7 +49,7 @@ export function Hints({ hints, onJump }: { hints: Hint[]; onJump: (uttId: string
             ? () => window.open(`#/m/${m.meeting!.id}${m.jump ? `?at=${encodeURIComponent(m.jump)}` : ""}`, "_blank")
             : h.jump ? () => onJump(h.jump!) : undefined;
           return (
-            <button key={h.id} type="button" className={`hint${i === 0 ? " latest" : ""}${h.level === "promoted" ? " promoted" : ""}`}
+            <button key={h.id} type="button" className={`hint-card${i === 0 ? " latest" : ""}${h.level === "promoted" ? " promoted" : ""}`}
               disabled={!open} onClick={open} title={h.matched.length ? `相符：${h.matched.join("、")}` : undefined}>
               {i === 0 && <span className="glow" key={h.id} />}
               <span className="hint-head">

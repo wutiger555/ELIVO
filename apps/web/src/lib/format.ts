@@ -18,6 +18,9 @@ export const dateTime = (epoch: number | null | undefined) => {
   return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+export const bytes = (n: number) =>
+  n <= 0 ? "0 KB" : n < 1e6 ? `${Math.max(1, Math.round(n / 1e3))} KB` : n < 1e9 ? `${(n / 1e6).toFixed(n < 1e8 ? 1 : 0)} MB` : `${(n / 1e9).toFixed(1)} GB`;
+
 export const STATUS_LABEL: Record<string, string> = {
   draft: "尚未開始", live: "收音中", paused: "已暫停", ending: "整理中", ended: "待確認", confirmed: "已確認", interrupted: "未正常結束",
 };

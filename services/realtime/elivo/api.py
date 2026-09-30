@@ -7,21 +7,23 @@
 """
 import asyncio
 import json
+import re
 import secrets
+import shutil
 import socket
 import time
 from contextlib import asynccontextmanager
 
 import numpy as np
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .asr.whisper_server import WhisperServer
-from .capture import Source, list_devices, rms, start_source
+from .capture import SPEAKER_SLUG, Source, list_devices, rms, start_source
 from .recall import bm25, tokens
-from .config import AUDIO_DIR, DB_PATH, SPOOL_DIR, WEB_DIST
+from .config import AUDIO_DIR, DATA_DIR, DB_PATH, SPOOL_DIR, WEB_DIST
 from .session import ACTIVE, SessionError, SessionManager
 from .store import Store
 
@@ -274,7 +276,8 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
         sources = body.sources or [{"speaker": "我", "device": None}]
         return st().create_meeting(
             body.title.strip(), space_id=body.space_id, series_id=body.series_id, mode=body.mode or "standard",
-            keep_audio=bool(body.keep_audio), glossary=body.glossary or "", sources=sources, tags=body.tags or [],
+            # 預設保存錄音（保險起見）；會後確認時可以刪除。Ephemeral 不論設定都不保存
+            keep_audio=body.keep_audio if body.keep_audio is not None else True, glossary=body.glossary or "", sources=sources, tags=body.tags or [],
             ai_policy=body.ai_policy or "economy",
         )
 
@@ -335,11 +338,84 @@ def create_app(settings: Settings, store: Store | None = None, asr=None, llm=Non
     class ConfirmIn(BaseModel):
         keep: list[str]
         edits: dict[str, dict] = {}
+        keep_audio: bool | None = None   # False：確認時一併刪除這場的錄音
 
     @app.post("/api/meetings/{meeting_id}/confirm")
     async def confirm(meeting_id: str, body: ConfirmIn):
         await run(mgr().confirm(meeting_id, body.keep, body.edits))
+        if body.keep_audio is False:
+            remove_audio(meeting_id)
         return mgr().get(meeting_id).snapshot()
+
+    # ---- 錄音檔（~/ELIVO-data/audio/<會議 id>-<me|other>.flac） ----
+
+    slug_speaker = {v: k for k, v in SPEAKER_SLUG.items()}
+
+    def audio_files(meeting_id: str) -> list[dict]:
+        return [{"slug": f.stem.split("-", 1)[1], "speaker": slug_speaker.get(f.stem.split("-", 1)[1], f.stem.split("-", 1)[1]),
+                 "bytes": f.stat().st_size, "url": f"/api/meetings/{meeting_id}/audio/{f.stem.split('-', 1)[1]}.flac"}
+                for f in sorted(AUDIO_DIR.glob(f"{meeting_id}-*.flac"))]
+
+    def remove_audio(meeting_id: str) -> int:
+        freed = 0
+        for f in AUDIO_DIR.glob(f"{meeting_id}-*.flac"):
+            freed += f.stat().st_size
+            f.unlink()
+        if st().meeting(meeting_id):
+            st().update_meeting(meeting_id, keep_audio=False)
+            if (s := mgr().sessions.get(meeting_id)):
+                s.meeting["keep_audio"] = False
+        return freed
+
+    @app.get("/api/meetings/{meeting_id}/audio")
+    def meeting_audio(meeting_id: str):
+        meeting_or_404(meeting_id)
+        return audio_files(meeting_id)
+
+    @app.get("/api/meetings/{meeting_id}/audio/{slug}.flac")
+    def audio_file(meeting_id: str, slug: str):
+        path = AUDIO_DIR / f"{meeting_id}-{slug}.flac"
+        if not re.fullmatch(r"[a-z]+", slug) or not path.exists():
+            raise HTTPException(404, "找不到這個錄音檔")
+        return FileResponse(path, media_type="audio/flac")   # 支援 Range，播放器可以拖曳
+
+    @app.delete("/api/meetings/{meeting_id}/audio")
+    def delete_audio(meeting_id: str):
+        meeting_or_404(meeting_id)
+        return {"freed": remove_audio(meeting_id)}
+
+    @app.get("/api/audio")
+    def audio_library():
+        """所有保存的錄音：每場的檔案與大小，加上這台 Mac 的剩餘空間。"""
+        ids = sorted({f.stem.split("-", 1)[0] for f in AUDIO_DIR.glob("*.flac")}) if AUDIO_DIR.exists() else []
+        rows = []
+        for mid in ids:
+            m = st().meeting(mid)
+            files = audio_files(mid)
+            rows.append({"meeting": {k: m[k] for k in ("id", "title", "status", "space_id", "started_at", "ended_at", "created_at", "duration_s")}
+                         if m else {"id": mid, "title": "（已刪除的會議）", "status": "deleted", "space_id": None,
+                                    "started_at": None, "ended_at": None, "created_at": 0, "duration_s": 0},
+                         "files": files, "bytes": sum(f["bytes"] for f in files)})
+        rows.sort(key=lambda r: -(r["meeting"]["started_at"] or r["meeting"]["created_at"] or 0))
+        return {"meetings": rows, "total_bytes": sum(r["bytes"] for r in rows),
+                "free_bytes": shutil.disk_usage(DATA_DIR if DATA_DIR.exists() else "/").free}
+
+    class CleanupIn(BaseModel):
+        older_than_days: int
+
+    @app.post("/api/audio/cleanup")
+    def audio_cleanup(body: CleanupIn):
+        """刪除 N 天以前的會議錄音（收音中的會議不動）。逐字稿與會議記錄保留。"""
+        cutoff = time.time() - max(0, body.older_than_days) * 86400
+        freed, n = 0, 0
+        for r in audio_library()["meetings"]:
+            m = r["meeting"]
+            if m["status"] in ("live", "paused", "ending", "interrupted"):
+                continue
+            if (m["ended_at"] or m["started_at"] or m["created_at"] or 0) < cutoff:
+                freed += remove_audio(m["id"])
+                n += 1
+        return {"freed": freed, "meetings": n}
 
     # ---- 手動編輯：會議記錄項目與逐字稿 ----
 
